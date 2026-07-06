@@ -1,0 +1,2251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ambaprasad Ganapathi Hegde — Virtual Commissioning & Digital Twins</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+  :root{
+    --bg: #0d1117;
+    --bg-2: #141a21;
+    --panel-border: rgba(139,149,161,0.22);
+    --cyan: #5ee6d0;
+    --amber: #f2a63a;
+    --red: #e24b4a;
+    --green: #3ddc84;
+    --steel: #c7ccd1;
+    --text: #eef1f4;
+    --text-dim: #8b95a1;
+    --accent: var(--cyan);
+    --display: 'Space Grotesk', sans-serif;
+    --body: 'IBM Plex Sans', sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+  }
+  body.mode-physical{ --accent: var(--amber); }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{ font-family:var(--body); background:var(--bg); color:var(--text); overflow-x:hidden; }
+  @media (pointer:fine){ body{cursor:none;} body a, body button{cursor:none;} }
+  a{color:inherit;}
+  ::-webkit-scrollbar{ width:10px; }
+  ::-webkit-scrollbar-track{ background:var(--bg); }
+  ::-webkit-scrollbar-thumb{ background:#2a3340; border-radius:5px; border:2px solid var(--bg); }
+  ::-webkit-scrollbar-thumb:hover{ background:var(--accent); }
+  .grain{ position:fixed; inset:0; z-index:60; pointer-events:none; opacity:.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  #cursor{ position:fixed; z-index:200; pointer-events:none; width:26px; height:26px; margin:-13px 0 0 -13px; display:none; }
+  @media (pointer:fine){ #cursor{display:block;} }
+  #cursor::before,#cursor::after{ content:''; position:absolute; background:var(--accent); transition:background .3s; }
+  #cursor::before{ left:12px; top:0; width:2px; height:26px; }
+  #cursor::after{ top:12px; left:0; height:2px; width:26px; }
+  #cursor .ring{ position:absolute; inset:4px; border:1px solid var(--accent); border-radius:50%; opacity:.55; transition:transform .18s ease, opacity .18s ease, border-color .3s; }
+  #cursor.is-hover .ring{ transform:scale(1.7); opacity:1; }
+  #boot{ position:fixed; inset:0; z-index:150; background:var(--bg); display:flex; align-items:center; justify-content:center; transition:opacity .5s ease; font-family:var(--mono); }
+  #boot.done{ opacity:0; pointer-events:none; }
+  #boot .boot-box{ font-size:.8rem; color:var(--text-dim); letter-spacing:.08em; min-width:300px; }
+  #boot .boot-line{ opacity:0; margin:.35rem 0; }
+  #boot .boot-line.on{ opacity:1; }
+  #boot .ok{ color:var(--cyan); }
+  #mode-toggle{ position:fixed; top:1.4rem; right:1.6rem; z-index:120; display:flex; align-items:center; gap:.6rem;
+    font-family:var(--mono); font-size:.62rem; letter-spacing:.14em; text-transform:uppercase; color:var(--text-dim);
+    background:rgba(13,17,23,0.82); border:1px solid var(--panel-border); padding:.55rem .8rem; backdrop-filter:blur(6px); user-select:none; }
+  #mode-toggle .sw{ width:38px; height:18px; border:1px solid var(--accent); position:relative; transition:border-color .3s; }
+  #mode-toggle .sw::after{ content:''; position:absolute; top:2px; left:2px; width:12px; height:12px; background:var(--accent); transition:left .25s ease, background .3s; }
+  body.mode-physical #mode-toggle .sw::after{ left:22px; }
+  #mode-toggle .lbl-v{ color:var(--cyan); }
+  #mode-toggle .lbl-p{ color:var(--text-dim); }
+  body.mode-physical #mode-toggle .lbl-v{ color:var(--text-dim); }
+  body.mode-physical #mode-toggle .lbl-p{ color:var(--amber); }
+  .eyebrow{ font-family:var(--mono); font-size:.7rem; letter-spacing:.2em; text-transform:uppercase; color:var(--accent); margin-bottom:1.1rem; display:flex; align-items:center; gap:.6rem; transition:color .3s; }
+  .dot{ width:6px; height:6px; border-radius:50%; background:var(--accent); box-shadow:0 0 8px 1px var(--accent); animation:blink 1.8s ease-in-out infinite; transition:background .3s, box-shadow .3s; }
+  @keyframes blink{ 0%,100%{opacity:1;} 50%{opacity:.25;} }
+  .section-title{ font-family:var(--display); font-weight:700; font-size:clamp(1.9rem,3.6vw,2.9rem); line-height:1.2; margin-bottom:2rem; }
+  section{ padding:7rem 8%; position:relative; }
+  .reveal{ opacity:0; transform:translateY(24px); transition:opacity .7s ease, transform .7s ease; }
+  .reveal.is-visible{ opacity:1; transform:none; }
+
+  .hero{ position:relative; height:100vh; min-height:660px; overflow:hidden; padding:0;
+    background:radial-gradient(ellipse at 70% 45%, #161d26 0%, var(--bg) 72%); }
+  #factory-canvas{ position:absolute; inset:0; width:100%; height:100%; touch-action:none; }
+  .hud{ position:absolute; z-index:5; font-family:var(--mono); font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--text-dim); pointer-events:none; }
+  .hud--tl{ top:2.2rem; left:8%; display:flex; align-items:center; gap:.6rem; }
+  .hud--bl{ bottom:2.4rem; left:8%; }
+  .hud--br{ bottom:2.4rem; right:8%; color:var(--accent); transition:color .3s; }
+  .hero__content{ position:relative; z-index:5; height:100%; display:flex; flex-direction:column; justify-content:center; padding:0 8%; max-width:820px; pointer-events:none; }
+  .hero__content a, .hero__content button{ pointer-events:auto; }
+  .hero__name{ font-family:var(--display); font-weight:700; font-size:clamp(2.1rem,5.2vw,3.9rem); line-height:1.15; text-shadow:0 2px 18px rgba(13,17,23,.9), 0 0 40px rgba(13,17,23,.7); }
+  .hero__title{ font-family:var(--mono); font-size:clamp(.95rem,1.6vw,1.15rem); color:var(--steel); margin-top:1.2rem; letter-spacing:.04em; text-shadow:0 2px 14px rgba(13,17,23,.95); }
+  .hero__title .dash{ color:var(--amber); margin:0 .5em; }
+  .hero__tagline{ margin-top:1.6rem; max-width:54ch; color:var(--steel); font-weight:400; font-size:1.02rem; line-height:1.75;
+    background:rgba(13,17,23,.78); border:1px solid var(--panel-border); border-left:2px solid var(--accent);
+    padding:1.1rem 1.3rem; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); }
+  .hero__tagline .hl{ color:var(--text); font-weight:500; }
+  .hero-zoom{ position:absolute; right:8%; bottom:5.6rem; z-index:6; display:flex; flex-direction:column; gap:.4rem; }
+  .hero-zoom button{ width:34px; height:34px; font-family:var(--mono); font-size:1rem; color:var(--text-dim);
+    background:rgba(13,17,23,.82); border:1px solid var(--panel-border); backdrop-filter:blur(6px); transition:color .2s, border-color .2s; }
+  .hero-zoom button:hover{ color:var(--accent); border-color:var(--accent); }
+  #globe-canvas{ width:100%; height:460px; display:block; touch-action:none; cursor:grab; }
+  #globe-canvas:active{ cursor:grabbing; }
+  .globe-hint{ font-family:var(--mono); font-size:.62rem; letter-spacing:.14em; color:var(--text-dim); text-align:center; margin-top:.6rem; }
+  .hero__scroll{ position:absolute; left:8%; bottom:2.4rem; z-index:5; display:flex; align-items:center; gap:.7rem; font-family:var(--mono); font-size:.68rem; letter-spacing:.18em; text-transform:uppercase; color:var(--text-dim); }
+  .hero__scroll span{ width:1px; height:30px; background:linear-gradient(var(--text-dim),transparent); animation:scrollcue 2s ease-in-out infinite; }
+  @keyframes scrollcue{ 0%{opacity:.2;transform:scaleY(.4);} 50%{opacity:1;transform:scaleY(1);} 100%{opacity:.2;transform:scaleY(.4);} }
+
+  .about{ background:var(--bg); }
+  .twin-wrap{ max-width:1180px; margin-top:1rem; }
+  .twin-controls{ display:flex; gap:.8rem; margin-bottom:1.2rem; }
+  .btn{ font-family:var(--mono); font-size:.7rem; letter-spacing:.12em; text-transform:uppercase; background:transparent; color:var(--text);
+    border:1px solid var(--panel-border); padding:.55rem 1rem; transition:border-color .2s, color .2s, background .2s; }
+  .btn:hover{ border-color:var(--accent); color:var(--accent); }
+  .btn--accent{ border-color:var(--accent); color:var(--accent); }
+  .btn--accent:hover{ background:var(--accent); color:var(--bg); }
+  .twin-frame{ border:1px solid var(--panel-border); background:var(--bg-2); padding:1rem; display:flex; gap:1rem; }
+  .twin-frame svg{ flex:1; min-width:0; height:auto; }
+  .twin-dash{ width:250px; flex:none; border-left:1px solid var(--panel-border); padding-left:1rem;
+    font-family:var(--mono); font-size:.66rem; letter-spacing:.06em; color:var(--text-dim); display:flex; flex-direction:column; gap:.34rem; }
+  .twin-dash .dh{ color:var(--text); letter-spacing:.14em; font-size:.62rem; margin-top:.55rem; border-bottom:1px solid var(--panel-border); padding-bottom:.3rem; }
+  .twin-dash .dh:first-child{ margin-top:0; }
+  .twin-dash .row{ display:flex; justify-content:space-between; }
+  .twin-dash .v{ color:var(--text); }
+  .twin-dash .v.on{ color:var(--green); }
+  .twin-dash .v.off{ color:var(--text-dim); }
+  .twin-dash .v.warn{ color:var(--amber); }
+  .twin-dash .v.err{ color:var(--red); }
+  .twin-caption{ font-family:var(--mono); font-size:.68rem; color:var(--text-dim); letter-spacing:.1em; margin-top:.8rem; line-height:1.7; }
+  .dt-explainer{ margin-top:2.6rem; max-width:820px; font-size:.98rem; font-weight:300; line-height:1.8; color:var(--text-dim); }
+  .dt-explainer .hl{ color:var(--text); font-weight:400; }
+  .mirror-copy{ display:grid; grid-template-columns:1fr 1fr; gap:2rem; margin-top:2.6rem; max-width:1020px; }
+  .mirror-box{ border:1px solid var(--panel-border); background:var(--bg-2); padding:1.8rem; position:relative; }
+  .mirror-box.phys{ border-top:2px solid var(--amber); }
+  .mirror-box.virt{ border-top:2px solid var(--cyan); }
+  .mirror-box .tag-label{ font-family:var(--mono); font-size:.66rem; letter-spacing:.16em; text-transform:uppercase; margin-bottom:1rem; }
+  .mirror-box.phys .tag-label{ color:var(--amber); }
+  .mirror-box.virt .tag-label{ color:var(--cyan); }
+  .mirror-box h3{ font-family:var(--display); font-size:1.22rem; margin-bottom:.8rem; }
+  .mirror-box p{ font-size:.93rem; font-weight:300; line-height:1.75; color:var(--text-dim); }
+  .log-line{ margin-top:2.8rem; font-family:var(--mono); font-size:.92rem; line-height:1.85; color:var(--accent); max-width:780px; border-left:2px solid var(--accent); padding-left:1.4rem; transition:color .3s, border-color .3s; }
+  .log-line::after{ content:'_'; animation:blink 1s step-end infinite; }
+
+  .projects{ background:var(--bg-2); }
+  .proj{ border:1px solid var(--panel-border); background:var(--bg); margin-bottom:3.5rem; padding:2.4rem;
+    display:grid; grid-template-columns:1fr 1.25fr; gap:2.6rem; }
+  .proj:nth-child(even of .proj){ grid-template-columns:1.25fr 1fr; }
+  .proj__viz{ border:1px solid var(--panel-border); background:#0a0e14; padding:1rem; position:relative; min-height:300px; display:flex; flex-direction:column; }
+  .proj__viz svg{ width:100%; height:auto; flex:1; }
+  .viz-bar{ display:flex; align-items:center; justify-content:space-between; margin-top:.8rem; gap:1rem; flex-wrap:wrap; }
+  .viz-status{ font-family:var(--mono); font-size:.62rem; letter-spacing:.12em; text-transform:uppercase; color:var(--text-dim); }
+  .proj__info .mod{ font-family:var(--mono); font-size:.64rem; letter-spacing:.16em; text-transform:uppercase; color:var(--text-dim); display:flex; align-items:center; gap:.6rem; margin-bottom:1rem; }
+  .led{ width:8px; height:8px; border-radius:50%; }
+  .led--cyan{ background:var(--cyan); box-shadow:0 0 8px 1px var(--cyan); }
+  .led--amber{ background:var(--amber); box-shadow:0 0 8px 1px var(--amber); }
+  .led--steel{ background:var(--steel); box-shadow:0 0 8px 1px var(--steel); }
+  .proj__info h3{ font-family:var(--display); font-size:1.45rem; margin-bottom:1rem; }
+  .proj__info p{ font-size:.93rem; font-weight:300; color:var(--text-dim); line-height:1.7; margin-bottom:1rem; }
+  .proj__info .hl{ color:var(--text); font-weight:400; }
+  .proj__tags{ display:flex; flex-wrap:wrap; gap:.5rem; margin-top:1.2rem; }
+  .tag{ font-family:var(--mono); font-size:.72rem; border:1px solid var(--panel-border); border-left:2px solid var(--accent); padding:.35rem .65rem; background:var(--bg-2); transition:border-color .3s; }
+  .metric-row{ display:flex; gap:2rem; margin-top:1.4rem; }
+  .metric b{ font-family:var(--display); font-size:1.7rem; color:var(--accent); display:block; transition:color .3s; }
+  .metric span{ font-family:var(--mono); font-size:.62rem; letter-spacing:.1em; text-transform:uppercase; color:var(--text-dim); }
+
+  #probe{ position:fixed; z-index:130; pointer-events:none; display:none; background:rgba(10,14,20,.94); border:1px solid var(--accent);
+    font-family:var(--mono); font-size:.66rem; letter-spacing:.06em; color:var(--text); padding:.5rem .7rem; max-width:240px; line-height:1.5; }
+  #probe .p-title{ color:var(--accent); text-transform:uppercase; letter-spacing:.12em; margin-bottom:.2rem; }
+
+  .experience{ background:var(--bg-2); }
+  .ladder{ list-style:none; max-width:800px; margin-top:1rem; position:relative; }
+  .rung{ position:relative; padding:1.5rem 0 1.5rem 2.2rem; border-left:2px solid var(--panel-border); transition:border-color .5s ease; }
+  .rung::before{ content:''; position:absolute; left:-8px; top:1.85rem; width:14px; height:14px; border-radius:50%; background:var(--bg-2); border:2px solid var(--text-dim); transition:all .5s ease; }
+  .rung.is-visible{ border-left-color:var(--accent); }
+  .rung.is-visible::before{ background:var(--accent); border-color:var(--accent); box-shadow:0 0 12px 2px rgba(94,230,208,.5); }
+  .rung__tag{ font-family:var(--mono); font-size:.64rem; letter-spacing:.14em; text-transform:uppercase; color:var(--text-dim); }
+  .rung__role{ font-family:var(--display); font-size:1.12rem; margin-top:.5rem; }
+  .rung__role span{ font-family:var(--mono); font-size:.82rem; color:var(--steel); font-weight:400; }
+  .rung__desc{ font-size:.9rem; font-weight:300; color:var(--text-dim); margin-top:.5rem; line-height:1.6; max-width:56ch; }
+  .rail-particle{ position:absolute; left:-4px; width:6px; height:6px; border-radius:50%; background:var(--accent); box-shadow:0 0 8px 2px var(--accent); opacity:0; }
+
+  .knowledge{ background:var(--bg); }
+  .knowledge__grid{ display:grid; grid-template-columns:1.2fr 1fr; gap:4rem; margin-top:1rem; }
+  .skills__group{ margin-bottom:1.7rem; }
+  .skills__label{ font-family:var(--mono); font-size:.66rem; letter-spacing:.14em; text-transform:uppercase; color:var(--text-dim); margin-bottom:.7rem; }
+  .skills__tags{ display:flex; flex-wrap:wrap; gap:.5rem; }
+  .edu-card{ border:1px solid var(--panel-border); background:var(--bg-2); padding:1.6rem; margin-bottom:1.4rem; }
+  .edu-card__tag{ font-family:var(--mono); font-size:.64rem; letter-spacing:.14em; text-transform:uppercase; color:var(--amber); }
+  .edu-card h3{ font-family:var(--display); font-size:1.1rem; margin-top:.5rem; }
+  .edu-card p.desc{ font-size:.86rem; font-weight:300; color:var(--text-dim); margin-top:.5rem; line-height:1.6; }
+
+  .contact{ background:var(--bg); }
+  .contact .section-title{ max-width:18ch; }
+  .contact__email{ display:inline-block; font-family:var(--mono); font-size:1.05rem; border:1px solid var(--accent); color:var(--accent); padding:.9rem 1.6rem; text-decoration:none; transition:background .2s, color .2s, border-color .3s; }
+  .contact__email:hover{ background:var(--accent); color:var(--bg); }
+  .contact__links{ margin-top:2.2rem; display:flex; gap:2rem; font-family:var(--mono); font-size:.78rem; letter-spacing:.1em; text-transform:uppercase; color:var(--text-dim); }
+  .contact__links a{ text-decoration:none; transition:color .2s; }
+  .contact__links a:hover{ color:var(--accent); }
+  .build-tag{ position:absolute; right:8%; bottom:2.2rem; font-family:var(--mono); font-size:.65rem; color:var(--text-dim); letter-spacing:.1em; }
+
+  @media (max-width:980px){
+    .twin-frame{ flex-direction:column; }
+    .twin-dash{ width:100%; border-left:none; border-top:1px solid var(--panel-border); padding-left:0; padding-top:1rem; }
+  }
+  @media (max-width:920px){
+    .proj, .proj:nth-child(even of .proj){ grid-template-columns:1fr; }
+    .mirror-copy{ grid-template-columns:1fr; }
+    .knowledge__grid{ grid-template-columns:1fr; }
+    #mode-toggle{ top:auto; bottom:1rem; right:1rem; }
+  }
+</style>
+</head>
+<body>
+<div class="grain"></div>
+<div id="cursor"><div class="ring"></div></div>
+<div id="probe"><div class="p-title"></div><div class="p-body"></div></div>
+
+<div id="boot">
+  <div class="boot-box">
+    <div class="boot-line">> INITIALIZING DIGITAL TWIN<span class="ok"> ...</span></div>
+    <div class="boot-line">> LOADING COMPONENT LIBRARY<span class="ok"> [OK]</span></div>
+    <div class="boot-line">> SYNCING PHYSICAL ⇄ VIRTUAL<span class="ok"> [OK]</span></div>
+    <div class="boot-line">> SYSTEM ONLINE<span class="ok"> ■</span></div>
+  </div>
+</div>
+
+<div id="mode-toggle" data-probe="Render mode|Switches the whole site — and the 3D plant — between the virtual model and the physical build.">
+  <span class="lbl-v">Virtual</span>
+  <div class="sw"></div>
+  <span class="lbl-p">Physical</span>
+</div>
+
+<section class="hero" id="hero">
+  <canvas id="factory-canvas"></canvas>
+  <div class="hud hud--tl" id="plc-status" style="pointer-events:auto;"><span class="dot"></span>SYS://FACTORY-TWIN · ONLINE · PORTFOLIO v1.1</div>
+  <div class="hud hud--bl">DRAG ROTATE · PINCH / CTRL+SCROLL / DBL-CLICK ZOOM</div>
+  <div class="hero-zoom"><button id="zoom-in" aria-label="Zoom in">+</button><button id="zoom-out" aria-label="Zoom out">−</button></div>
+  <div class="hud hud--br" id="hud-mode">MODE: VIRTUAL · MIX 0.00</div>
+  <div class="hero__content">
+    <p class="eyebrow"><span class="dot"></span>Munich, Germany</p>
+    <h1 class="hero__name">Ambaprasad<br>Ganapathi Hegde</h1>
+    <p class="hero__title">Virtual Commissioning<span class="dash">/</span>Digital Twins</p>
+    <p class="hero__tagline">Specialist in <span class="hl">virtual commissioning and digital twins</span> — I build production lines in software before they exist in steel. PLC test automation, plant simulation and AI-assisted validation for <span class="hl">Industry 4.0 manufacturing</span>: proving the plant runs perfectly before the first bolt is tightened.</p>
+  </div>
+  <div class="hero__scroll"><span></span>Scroll</div>
+</section>
+
+<section class="about" id="about">
+  <p class="eyebrow reveal">// About — a live digital twin</p>
+  <h2 class="section-title reveal">Two versions of the same system</h2>
+  <div class="twin-wrap reveal">
+    <div class="hmi" data-probe="HMI|Styled after a SIMATIC WinCC operator panel — every button really drives the twin below. Try MANUAL.">
+      <div class="hmi__title">LINE 01 · OPERATOR PANEL</div>
+      <div class="hmi__row">
+        <button class="hmi-btn hmi-btn--active" id="twin-auto-btn">AUTO</button>
+        <button class="hmi-btn" id="twin-man-btn">MANUAL</button>
+      </div>
+      <div class="hmi__row">
+        <button class="hmi-btn hmi-btn--green" id="twin-start">START</button>
+        <button class="hmi-btn hmi-btn--red" id="twin-stop">STOP</button>
+        <button class="hmi-btn" id="twin-reset">RESET</button>
+      </div>
+      <div class="hmi__row">
+        <button class="hmi-btn" id="twin-back">◀ BWD</button>
+        <button class="hmi-btn" id="twin-fwd">FWD ▶</button>
+        <button class="hmi-btn" id="twin-fast">FAST</button>
+        <button class="hmi-btn" id="twin-drill">DRILL</button>
+      </div>
+      <div class="hmi__lamps">
+        <span class="lamp-wrap"><span class="lamp lamp--on" id="lamp-run"></span>RUN</span>
+        <span class="lamp-wrap"><span class="lamp lamp--on" id="lamp-sync"></span>SYNC</span>
+        <span class="lamp-wrap"><span class="lamp" id="lamp-fault"></span>FAULT</span>
+        <span class="lamp-wrap"><span class="lamp lamp--amber" id="lamp-auto"></span>AUTO</span>
+      </div>
+    </div>
+    <div class="twin-frame">
+      <svg id="twin-svg" viewBox="0 0 1000 300" xmlns="http://www.w3.org/2000/svg">
+        <text x="30" y="30" fill="#f2a63a" font-family="JetBrains Mono, monospace" font-size="12" letter-spacing="2">PHYSICAL MODEL</text>
+        <g id="phys-scene"></g>
+        <line x1="500" y1="44" x2="500" y2="280" stroke="rgba(139,149,161,0.3)" stroke-dasharray="4 5"/>
+        <text x="500" y="30" fill="#8b95a1" font-family="JetBrains Mono, monospace" font-size="10" text-anchor="middle" letter-spacing="2">OPC UA</text>
+        <circle id="sync-dot-a" r="4" fill="#5ee6d0" opacity="0"/>
+        <circle id="sync-dot-b" r="4" fill="#f2a63a" opacity="0"/>
+        <text x="970" y="30" fill="#5ee6d0" font-family="JetBrains Mono, monospace" font-size="12" letter-spacing="2" text-anchor="end">PLANT SIMULATION</text>
+        <g id="virt-scene"></g>
+      </svg>
+      <div class="twin-dash" id="twin-dash">
+        <div class="dh">SYSTEM</div>
+        <div class="row"><span>STATE</span><span class="v on" id="d-state">RUNNING</span></div>
+        <div class="row"><span>MODE</span><span class="v warn" id="d-mode">AUTO</span></div>
+        <div class="row"><span>SYNC</span><span class="v on" id="d-sync">OK · <span id="d-lat">12</span> ms</span></div>
+        <div class="dh">KPI</div>
+        <div class="row"><span>ENERGY</span><span class="v" id="d-energy">4.21 kW</span></div>
+        <div class="row"><span>THROUGHPUT</span><span class="v" id="d-tp">36/h</span></div>
+        <div class="row"><span>CYCLE</span><span class="v" id="d-cycle">8.4 s</span></div>
+        <div class="dh">CONVEYORS</div>
+        <div class="row"><span>CONV 1 · A→B</span><span class="v" id="d-c1">IDLE</span></div>
+        <div class="row"><span>CONV 2 · B→C</span><span class="v" id="d-c2">IDLE</span></div>
+        <div class="row"><span>CONV 3 · C→D</span><span class="v" id="d-c3">IDLE</span></div>
+        <div class="row"><span>CONV 4 · OUT</span><span class="v" id="d-c4">IDLE</span></div>
+        <div class="dh">STATIONS</div>
+        <div class="row"><span>STN B · INSPECT</span><span class="v" id="d-insp">—</span></div>
+        <div class="row"><span>STN C · DRILL</span><span class="v" id="d-drill">IDLE</span></div>
+        <div class="dh">PARTS</div>
+        <div class="row"><span>OK</span><span class="v on" id="d-ok">0</span></div>
+        <div class="row"><span>REJECTED</span><span class="v err" id="d-rej">0</span></div>
+      </div>
+    </div>
+    <p class="twin-caption">LIVE MODEL — based on the digital twin I built at OVGU: a miniature production line mirrored in Tecnomatix Plant Simulation over OPC UA, with two-way controls and a live KPI dashboard.</p>
+  </div>
+  <p class="dt-explainer reveal">A <span class="hl">digital twin</span> is a live virtual replica of a physical system, connected in both directions. Every state change on the real line — a part arriving, a drill cycle, a fault — is mirrored in the model within milliseconds; and every command issued in either world acts on both. Above, the part travels A→B→C→D: inspected at B (and rejected if it fails), drilled at C, discharged at D — while the simulation tracks every step. This is how modern plants are <span class="hl">tested before they're built and optimized after they're running</span>.</p>
+  <div class="mirror-copy">
+    <div class="mirror-box phys reveal">
+      <p class="tag-label">Physical · v1.0</p>
+      <h3>Mechanical Engineer</h3>
+      <p>Trained on real hardware — vehicles, robots, production lines. A B.Eng. in Mechanical Engineering and early roles at HCL and Coca-Cola built the instinct for how physical systems actually behave on the floor.</p>
+    </div>
+    <div class="mirror-box virt reveal">
+      <p class="tag-label">Digital Twin · v2.0</p>
+      <h3>Systems &amp; Simulation Engineer</h3>
+      <p>An M.Sc. in Systems Engineering for Manufacturing and three years at BMW turned that instinct into software — PLC validation, virtual commissioning, and AI-assisted analysis that mirror the physical line before it's ever built.</p>
+    </div>
+  </div>
+  <p class="log-line reveal">&gt; Every production line exists twice — once in code, once in steel. I'm the engineer who makes sure both versions agree.</p>
+</section>
+
+<style>
+  /* ---- v1.1 additions ---- */
+  .datasheet{ background:var(--bg-2); }
+  .ds-grid{ display:grid; grid-template-columns:1fr; gap:2rem; max-width:880px; }
+  .ds-card{ border:1px solid var(--panel-border); background:var(--bg); padding:1.8rem; }
+  .ds-card h3{ font-family:var(--display); font-size:1.15rem; margin-bottom:1.2rem; letter-spacing:.02em; }
+  .ds-row{ display:flex; gap:1rem; padding:.5rem 0; border-bottom:1px dashed rgba(139,149,161,.14); font-size:.8rem; }
+  .ds-row:last-child{ border-bottom:none; }
+  .ds-k{ font-family:var(--mono); font-size:.64rem; letter-spacing:.12em; text-transform:uppercase; color:var(--text-dim); width:150px; flex:none; padding-top:.15rem; }
+  .ds-v{ color:var(--text); font-weight:300; line-height:1.55; }
+  .ds-v .hl{ color:var(--accent); transition:color .3s; }
+  .changelog{ font-family:var(--mono); font-size:.74rem; line-height:1.9; color:var(--text-dim); }
+  .changelog .ver{ color:var(--accent); letter-spacing:.1em; margin-top:1rem; display:block; transition:color .3s; }
+  .changelog .ver:first-child{ margin-top:0; }
+  .changelog .cur{ color:var(--green); font-size:.62rem; border:1px solid var(--green); padding:.05rem .4rem; margin-left:.5rem; }
+
+  .deploy{ background:var(--bg); }
+  .deploy-flex{ display:flex; gap:2rem; max-width:1180px; align-items:stretch; }
+  .deploy-map{ flex:1; min-width:0; border:1px solid var(--panel-border); background:var(--bg-2); padding:1rem; }
+  .deploy-map svg{ width:100%; height:auto; }
+  .deploy-list{ width:280px; flex:none; display:flex; flex-direction:column; gap:1rem; }
+  .site{ border:1px solid var(--panel-border); background:var(--bg-2); padding:1rem 1.2rem; }
+  .site .s-name{ font-family:var(--display); font-size:1rem; }
+  .site .s-meta{ font-family:var(--mono); font-size:.62rem; letter-spacing:.12em; text-transform:uppercase; color:var(--text-dim); margin-top:.3rem; }
+  .site .s-flag{ color:var(--accent); transition:color .3s; }
+  .deploy-note{ margin-top:1.6rem; max-width:820px; font-size:.95rem; font-weight:300; line-height:1.75; color:var(--text-dim); }
+  .deploy-note .hl{ color:var(--text); font-weight:400; }
+  @keyframes sitehalo{ 0%{opacity:.7;} 70%{opacity:0;} 100%{opacity:0;} }
+
+  .hmi{ display:inline-block; border:1px solid var(--panel-border); background:linear-gradient(180deg,#1b222c,#141a21); padding:.9rem 1.1rem 1rem; margin-bottom:1.2rem; }
+  .hmi__title{ font-family:var(--mono); font-size:.6rem; letter-spacing:.16em; color:var(--text-dim); margin-bottom:.7rem; }
+  .hmi__row{ display:flex; gap:.5rem; }
+  .hmi-btn{ font-family:var(--mono); font-size:.66rem; letter-spacing:.1em; padding:.6rem 1rem; color:var(--text);
+    background:linear-gradient(180deg,#2a3340,#1b222c); border:1px solid #39434f;
+    border-top-color:#4a5563; border-left-color:#4a5563; box-shadow:inset 0 1px 0 rgba(255,255,255,.06); }
+  .hmi-btn:active{ background:#141a21; box-shadow:inset 0 2px 4px rgba(0,0,0,.5); }
+  .hmi-btn--green{ background:linear-gradient(180deg,#1f8a4d,#166b3a); border-color:#2aa860; color:#eafff2; }
+  .hmi-btn--red{ background:linear-gradient(180deg,#b03a39,#8c2b2a); border-color:#d05a58; color:#ffecec; }
+  .hmi__lamps{ display:flex; gap:1.1rem; margin-top:.8rem; font-family:var(--mono); font-size:.58rem; letter-spacing:.12em; color:var(--text-dim); }
+  .lamp-wrap{ display:flex; align-items:center; gap:.35rem; }
+  .lamp{ width:9px; height:9px; border-radius:50%; background:#2a3340; border:1px solid #39434f; }
+  .lamp--on{ background:var(--green); box-shadow:0 0 7px 1px var(--green); border-color:var(--green); }
+  .lamp--amber{ background:var(--amber); box-shadow:0 0 7px 1px var(--amber); border-color:var(--amber); }
+  .lamp--red{ background:var(--red); box-shadow:0 0 7px 1px var(--red); border-color:var(--red); }
+
+  .station{ border:1px solid var(--panel-border); background:var(--bg); margin-bottom:1.2rem; }
+  .station__head{ display:flex; align-items:center; gap:1rem; padding:1.2rem 1.5rem; user-select:none; }
+  .station__num{ font-family:var(--mono); font-size:.62rem; letter-spacing:.14em; color:var(--accent); border:1px solid var(--accent); padding:.3rem .55rem; flex:none; transition:color .3s, border-color .3s; }
+  .station__role{ font-family:var(--display); font-size:1.08rem; flex:1; }
+  .station__role span{ font-family:var(--mono); font-size:.78rem; color:var(--steel); font-weight:400; }
+  .station__dates{ font-family:var(--mono); font-size:.62rem; letter-spacing:.1em; color:var(--text-dim); }
+  .station__chev{ font-family:var(--mono); color:var(--text-dim); transition:transform .3s; }
+  .station.open .station__chev{ transform:rotate(90deg); }
+  .station__body{ display:none; padding:0 1.5rem 1.5rem; }
+  .station.open .station__body{ display:grid; grid-template-columns:repeat(5,1fr); gap:1rem; }
+  .sfield .sf-k{ font-family:var(--mono); font-size:.58rem; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); margin-bottom:.45rem; transition:color .3s; }
+  .sfield .sf-v{ font-size:.8rem; font-weight:300; color:var(--text-dim); line-height:1.6; }
+  .sfield .todo{ color:#5f6b78; font-style:italic; }
+  .belt-rail{ height:8px; background:repeating-linear-gradient(90deg, #1b222c 0 26px, #232c37 26px 30px); border:1px solid var(--panel-border); margin:.2rem 0 1.4rem; position:relative; overflow:hidden; }
+  .belt-rail .pallet{ position:absolute; top:1px; width:14px; height:4px; background:var(--accent); animation:palletmove 9s linear infinite; }
+  @keyframes palletmove{ 0%{left:-4%;} 100%{left:102%;} }
+
+  .tabs{ display:flex; gap:.4rem; margin-bottom:1.1rem; }
+  .tab-btn{ font-family:var(--mono); font-size:.6rem; letter-spacing:.12em; text-transform:uppercase; background:transparent; color:var(--text-dim); border:1px solid var(--panel-border); padding:.42rem .7rem; }
+  .tab-btn.on{ border-color:var(--accent); color:var(--accent); }
+  .tab-pane{ display:none; }
+  .tab-pane.on{ display:block; }
+  .tab-pane .arch-k{ font-family:var(--mono); font-size:.62rem; letter-spacing:.1em; color:var(--accent); text-transform:uppercase; transition:color .3s; }
+  .review-flag{ font-family:var(--mono); font-size:.6rem; color:#5f6b78; border:1px dashed #39434f; padding:.3rem .6rem; display:inline-block; margin-top:.4rem; }
+
+  #toasts{ position:fixed; left:1.4rem; bottom:1.4rem; z-index:180; display:flex; flex-direction:column; gap:.6rem; max-width:340px; }
+  .toast{ background:rgba(10,14,20,.96); border:1px solid var(--accent); font-family:var(--mono); font-size:.7rem; letter-spacing:.04em; color:var(--text); padding:.8rem 1rem; line-height:1.6; animation:toastin .25s ease; }
+  .toast.alarm{ border-color:var(--red); }
+  .toast .t-title{ color:var(--accent); text-transform:uppercase; letter-spacing:.12em; margin-bottom:.25rem; }
+  .toast.alarm .t-title{ color:var(--red); }
+  .toast .t-actions{ display:flex; gap:.5rem; margin-top:.6rem; }
+  @keyframes toastin{ from{opacity:0; transform:translateY(8px);} }
+  #stack-modal{ position:fixed; inset:0; z-index:190; background:rgba(13,17,23,.9); display:none; align-items:center; justify-content:center; }
+  #stack-modal.on{ display:flex; }
+  #stack-modal .sm-box{ background:var(--bg-2); border:1px solid var(--accent); padding:2rem; max-width:520px; width:92%; font-family:var(--mono); font-size:.72rem; line-height:1.9; color:var(--text-dim); }
+  #stack-modal .sm-box .k{ color:var(--accent); }
+  body.eng-mode section *, body.eng-mode .proj *{ outline:1px dashed rgba(94,230,208,.16); }
+  .eggs{ margin-top:3rem; font-family:var(--mono); font-size:.68rem; color:var(--text-dim); letter-spacing:.06em; line-height:2; max-width:560px; }
+  .eggs summary{ color:var(--accent); cursor:pointer; letter-spacing:.12em; text-transform:uppercase; font-size:.64rem; transition:color .3s; }
+  .hmi__row + .hmi__row{ margin-top:.5rem; }
+  .hmi-btn--active{ border-color:var(--cyan) !important; color:var(--cyan); box-shadow:0 0 8px rgba(94,230,208,.25), inset 0 0 6px rgba(94,230,208,.12); }
+  .hmi-btn--green.hmi-btn--active, .hmi-btn--red.hmi-btn--active{ color:inherit; }
+  .hmi-btn:disabled{ opacity:.35; }
+  .sfield .sf-v{ text-align:justify; hyphens:auto; -webkit-hyphens:auto; }
+  .changelog-mini{ margin-top:1.6rem; max-width:880px; font-family:var(--mono); font-size:.68rem; color:var(--text-dim); letter-spacing:.05em; line-height:2; border:1px dashed var(--panel-border); padding:.8rem 1.1rem; }
+  .changelog-mini summary{ color:var(--text-dim); cursor:pointer; letter-spacing:.12em; font-size:.62rem; text-transform:uppercase; }
+  .changelog-mini .ver{ color:var(--accent); margin-right:.4rem; transition:color .3s; }
+  .changelog-mini .cur{ color:var(--green); border:1px solid var(--green); padding:.02rem .35rem; font-size:.56rem; margin:0 .5rem 0 .35rem; }
+  .sakura{ position:fixed; top:-3%; z-index:170; border-radius:0 60% 60% 60%; background:linear-gradient(135deg,#fbd8e1,#f2a6b8); pointer-events:none; }
+  @media (max-width:980px){
+    .ds-grid{ grid-template-columns:1fr; }
+    .deploy-flex{ flex-direction:column; }
+    .deploy-list{ width:100%; }
+    .station.open .station__body{ grid-template-columns:1fr 1fr; }
+  }
+</style>
+
+<section class="datasheet" id="datasheet">
+  <p class="eyebrow reveal">// Product Datasheet</p>
+  <h2 class="section-title reveal">Unit designation: FABLE</h2>
+  <div class="ds-grid">
+    <div class="ds-card reveal" data-probe="Datasheet|Every industrial component ships with one. So does this engineer.">
+      <h3>Industrial Engineer Unit · Series AGH</h3>
+      <div class="ds-row"><div class="ds-k">Product</div><div class="ds-v">FABLE — self-optimizing engineering unit, field-proven</div></div>
+      <div class="ds-row"><div class="ds-k">Class</div><div class="ds-v">Virtual Commissioning / Digital Twin Specialist</div></div>
+      <div class="ds-row"><div class="ds-k">Core functions</div><div class="ds-v"><span class="hl">PLC test automation</span> · digital twin synchronization · <span class="hl">AI-assisted validation</span> · collision detection · change management</div></div>
+      <div class="ds-row"><div class="ds-k">Protocols</div><div class="ds-v">OPC UA · PROFINET · MCP · REST · English (C1) · German (B1)</div></div>
+      <div class="ds-row"><div class="ds-k">Runtime</div><div class="ds-v">C# / .NET · Python · PLC (SCL/LAD) · TIA Portal · Tecnomatix</div></div>
+      <div class="ds-row"><div class="ds-k">Operating range</div><div class="ds-v">University research lab → Gen6 high-voltage battery production lines, three continents</div></div>
+      <div class="ds-row"><div class="ds-k">Power input</div><div class="ds-v">Filter coffee, 2 cups/day nominal. Peak load: 3.</div></div>
+      <div class="ds-row"><div class="ds-k">Known behavior</div><div class="ds-v">Refuses to ship untested logic. Will build a tool rather than repeat a task twice.</div></div>
+      <div class="ds-row"><div class="ds-k">Firmware</div><div class="ds-v">Continuously updated since 1998. No planned obsolescence.</div></div>
+    </div>
+  </div>
+  <details class="changelog-mini reveal">
+    <summary>// Portfolio changelog — v1.1</summary>
+    <span class="ver">v1.1<span class="cur">CURRENT</span></span> + AI assistant mockup · + validation simulator · + field deployment map · + hidden easter eggs<br>
+    <span class="ver">v1.0</span> + digital validation dashboard · + PLC comparison demo · + VC case study · + live digital twin, 3D plant
+  </details>
+</section>
+
+<section class="deploy" id="deploy">
+  <p class="eyebrow reveal">// Field Deployments — Gen6 HV Battery Production</p>
+  <h2 class="section-title reveal">Commissioned across three continents</h2>
+  <div class="deploy-flex reveal">
+    <div class="deploy-map" id="globe-holder">
+      <canvas id="globe-canvas"></canvas>
+      <p class="globe-hint">DRAG TO SPIN THE EARTH · ACTIVE SITES PULSING</p>
+    </div>
+    <div class="deploy-list">
+      <div class="site" ><p class="s-name">Spartanburg, USA</p><p class="s-meta"><span class="s-flag">HiL / SiL</span> · Gen6 HV Battery VC</p></div>
+      <div class="site"><p class="s-name">Debrecen, Hungary</p><p class="s-meta"><span class="s-flag">HiL / SiL</span> · Gen6 HV Battery VC</p></div>
+      <div class="site"><p class="s-name">Dingolfing, Germany</p><p class="s-meta"><span class="s-flag">Home plant</span> · VC &amp; Digital Lab</p></div>
+      <div class="site"><p class="s-name">Shenyang, China</p><p class="s-meta"><span class="s-flag">HiL / SiL</span> · Gen6 HV Battery VC</p></div>
+    </div>
+  </div>
+  <p class="deploy-note reveal">I've supported <span class="hl">HiL and SiL virtual commissioning projects for Gen6 high-voltage battery production lines</span> across these sites — validating PLC software virtually so that lines on three continents start up right, plus maintaining the digital laboratory infrastructure (PLCs, virtual robot controllers, simulation models, industrial networks) behind them.</p>
+</section>
+
+<section class="experience" id="experience">
+  <p class="eyebrow reveal">// Experience</p>
+  <h2 class="section-title reveal">Industrial timeline</h2>
+  <div class="belt-rail reveal"><div class="pallet"></div><div class="pallet" style="animation-delay:-4.5s;"></div></div>
+  <div id="stations">
+    <div class="station reveal open">
+      <div class="station__head"><span class="station__num">STN 06</span><p class="station__role">Specialist, Virtual Commissioning &amp; Digitalization <span>· BMW (via Brunel GmbH)</span></p><span class="station__dates">01/2025 — PRESENT</span><span class="station__chev">▸</span></div>
+      <div class="station__body">
+        <div class="sfield"><p class="sf-k">Problem</p><p class="sf-v">PLC validation was manual, expert-bound, and expensive — repeated for every PLC on every line.</p></div>
+        <div class="sfield"><p class="sf-k">What I built</p><p class="sf-v">Productized the automated VC validation suite (patent-pending) and rolled it out across international sites; added AI workflows for collision checks and change analysis.</p></div>
+        <div class="sfield"><p class="sf-k">Tools</p><p class="sf-v">fe.screen-sim, TIA Portal, C#/.NET, Python, MCP, OPC UA</p></div>
+        <div class="sfield"><p class="sf-k">Impact</p><p class="sf-v">−22% testing cost per PLC, −28% testing cycle time; standardized knowledge reuse.</p></div>
+        <div class="sfield"><p class="sf-k">Learned</p><p class="sf-v">Turning a prototype into a product is 20% code, 80% requirements, architecture and rollout.</p></div>
+      </div>
+    </div>
+    <div class="station reveal">
+      <div class="station__head"><span class="station__num">STN 05</span><p class="station__role">Master's Thesis Student <span>· BMW</span></p><span class="station__dates">07/2024 — 12/2024</span><span class="station__chev">▸</span></div>
+      <div class="station__body">
+        <div class="sfield"><p class="sf-k">Problem</p><p class="sf-v">Test knowledge lived in experts' heads; every PLC was tested from scratch.</p></div>
+        <div class="sfield"><p class="sf-k">What I built</p><p class="sf-v">A component-based automation framework for PLC testing in a VC environment — abstract test cases populated with real control data.</p></div>
+        <div class="sfield"><p class="sf-k">Tools</p><p class="sf-v">UML, Asset Administration Shells, OPC UA, MBSE</p></div>
+        <div class="sfield"><p class="sf-k">Impact</p><p class="sf-v">Working prototype proved feasibility and scalability — became the foundation of the patented product.</p></div>
+        <div class="sfield"><p class="sf-k">Learned</p><p class="sf-v">The right abstraction is leverage: write a test once, run it on every PLC.</p></div>
+      </div>
+    </div>
+    <div class="station reveal">
+      <div class="station__head"><span class="station__num">STN 04</span><p class="station__role">Intern, Virtual Commissioning <span>· BMW</span></p><span class="station__dates">01/2024 — 07/2024</span><span class="station__chev">▸</span></div>
+      <div class="station__body">
+        <div class="sfield"><p class="sf-k">Problem</p><p class="sf-v">Engineering data (PLC code vs control data) was inconsistent; testing progress was invisible.</p></div>
+        <div class="sfield"><p class="sf-k">What I built</p><p class="sf-v">A validation tool for code/data inconsistencies, a KPI monitoring system for test activities, and the digital lab network architecture.</p></div>
+        <div class="sfield"><p class="sf-k">Tools</p><p class="sf-v">C#, S7-1500, virtual robot controllers, simulation models</p></div>
+        <div class="sfield"><p class="sf-k">Impact</p><p class="sf-v">Reliable engineering data for simulation and commissioning; visibility into validation readiness.</p></div>
+        <div class="sfield"><p class="sf-v todo">Learned — [to fill in]</p></div>
+      </div>
+    </div>
+    <div class="station reveal">
+      <div class="station__head"><span class="station__num">STN 03</span><p class="station__role">Research Assistant <span>· OVGU Magdeburg</span></p><span class="station__dates">03/2023 — 08/2023</span><span class="station__chev">▸</span></div>
+      <div class="station__body">
+        <div class="sfield"><p class="sf-k">Problem</p><p class="sf-v">The lab's miniature production line had no live digital counterpart for research and teaching.</p></div>
+        <div class="sfield"><p class="sf-k">What I built</p><p class="sf-v">A two-way digital twin in Tecnomatix Plant Simulation over OPC UA, plus a web KPI dashboard with dual-channel control.</p></div>
+        <div class="sfield"><p class="sf-k">Tools</p><p class="sf-v">Tecnomatix Plant Simulation, OPC UA, web dashboard</p></div>
+        <div class="sfield"><p class="sf-k">Impact</p><p class="sf-v">Real-time bidirectional control and monitoring — the demo at the top of this page.</p></div>
+        <div class="sfield"><p class="sf-k">Learned</p><p class="sf-v">Sync latency is the truth-teller of any digital twin.</p></div>
+      </div>
+    </div>
+    <div class="station reveal">
+      <div class="station__head"><span class="station__num">STN 02</span><p class="station__role">Project Engineer <span>· HCL</span></p><span class="station__dates">12/2020 — 09/2022</span><span class="station__chev">▸</span></div>
+      <div class="station__body">
+        <div class="sfield"><p class="sf-k">Problem</p><p class="sf-v">Medical-device development demands controlled processes across engineering, quality and regulatory functions.</p></div>
+        <div class="sfield"><p class="sf-k">What I built</p><p class="sf-v">End-to-end change management, resource planning, and customer-specific Standard Operating Procedures.</p></div>
+        <div class="sfield"><p class="sf-k">Tools</p><p class="sf-v">Agile project management, controlled development processes</p></div>
+        <div class="sfield"><p class="sf-k">Impact</p><p class="sf-v">On-time, compliant delivery of engineering work packages.</p></div>
+        <div class="sfield"><p class="sf-k">Learned</p><p class="sf-v">Process discipline is what lets interdisciplinary teams scale.</p></div>
+      </div>
+    </div>
+    <div class="station reveal">
+      <div class="station__head"><span class="station__num">STN 01</span><p class="station__role">Intern Engineer <span>· Coca-Cola</span></p><span class="station__dates">01/2020 — 06/2020</span><span class="station__chev">▸</span></div>
+      <div class="station__body">
+        <div class="sfield"><p class="sf-k">Problem</p><p class="sf-v">Truck turnaround time in the loading area was a plant-wide bottleneck.</p></div>
+        <div class="sfield"><p class="sf-k">What I built</p><p class="sf-v">Targeted logistics process improvements from bottleneck analysis in the loading area.</p></div>
+        <div class="sfield"><p class="sf-k">Tools</p><p class="sf-v">Bottleneck analysis, process mapping</p></div>
+        <div class="sfield"><p class="sf-k">Impact</p><p class="sf-v">−10% turnaround time across the entire plant.</p></div>
+        <div class="sfield"><p class="sf-k">Learned</p><p class="sf-v">Watch the floor, not the report.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="knowledge" id="skills">
+  <p class="eyebrow reveal">// Knowledge &amp; Education</p>
+  <h2 class="section-title reveal">Spec sheet</h2>
+  <div class="knowledge__grid">
+    <div class="skills reveal">
+      <div class="skills__group"><p class="skills__label">Virtual Commissioning</p><div class="skills__tags"><span class="tag">fe.screen-sim</span><span class="tag">Process Simulate</span><span class="tag">ISG-Virtuos</span><span class="tag">Simit</span></div></div>
+      <div class="skills__group"><p class="skills__label">Control Engineering</p><div class="skills__tags"><span class="tag">Siemens TIA Portal</span><span class="tag">S7-1500</span><span class="tag">S7-300</span><span class="tag">WinCC SIMATIC Manager</span></div></div>
+      <div class="skills__group"><p class="skills__label">Robot Simulation</p><div class="skills__tags"><span class="tag">Kuka OfficeLite</span><span class="tag">KUKA WorkVisual</span><span class="tag">ABB RobotStudio</span></div></div>
+      <div class="skills__group"><p class="skills__label">Programming &amp; AI</p><div class="skills__tags"><span class="tag">C# / .NET</span><span class="tag">Python</span><span class="tag">PLC Programming</span><span class="tag">RAG Workflows</span><span class="tag">Vector DBs</span><span class="tag">MCP Server</span></div></div>
+      <div class="skills__group"><p class="skills__label">Business Tools &amp; Languages</p><div class="skills__tags"><span class="tag">Siemens Teamcenter</span><span class="tag">SAP ERP</span><span class="tag">English C1</span><span class="tag">German B1</span></div></div>
+    </div>
+    <div class="education reveal">
+      <div class="edu-card"><p class="edu-card__tag">DEGREE 01 · GRADE 1.9</p><h3>M.Sc. Systems Engineering for Manufacturing</h3><p class="desc">Otto von Guericke University Magdeburg · 10/2022 – 12/2024. Thesis: component-based automation framework for PLC testing in virtual commissioning (→ Project 01).</p></div>
+      <div class="edu-card"><p class="edu-card__tag">DEGREE 02 · GRADE 2.0</p><h3>B.Eng. Mechanical Engineering</h3><p class="desc">08/2016 – 08/2020. Electric vehicle for agricultural applications; 4-axis robot for high-risk manufacturing environments.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="projects" id="work">
+  <p class="eyebrow reveal">// Selected Work</p>
+  <h2 class="section-title reveal">Six modules, each one live</h2>
+
+  <!-- 01 TEST AUTOMATION -->
+  <article class="proj reveal" id="a-test">
+    <div class="proj__info">
+      <p class="mod"><span class="led led--cyan"></span>PROJECT 01 · PATENT-PENDING · BMW</p>
+      <h3>Component-Based PLC Test Automation</h3>
+      <div class="tabs"><button class="tab-btn on" data-tab="simple">Simple</button><button class="tab-btn" data-tab="arch">Architecture</button><button class="tab-btn" data-tab="impact">Impact</button></div>
+      <div class="tab-pane on" data-pane="simple">
+        <p>A plant with 10 PLCs controls 10 regions — but the same building blocks everywhere: <span class="hl">conveyors, drives, cylinders, sensors, doors, robots</span>, all from one component library. The virtual models are built from the same blocks.</p>
+        <p>So test cases are written once, at the <span class="hl">component level, in abstract form</span> — then populated with real control data from whichever PLC is under test, and executed against PLC and virtual model in both directions. Watch it run on the right: the suite works through the station component by component, catches a failure, retests, and passes.</p>
+      </div>
+      <div class="tab-pane" data-pane="arch">
+        <p><span class="arch-k">Layer 1 — Templates:</span> abstract test cases per library component, parameterized ({POS_A}, {SENSOR_1}), stored suite-side.</p>
+        <p><span class="arch-k">Layer 2 — Information models:</span> each component type carries a model of its signals, positions and behavior — the suite knows every object the PLC can use.</p>
+        <p><span class="arch-k">Layer 3 — Population engine:</span> binds templates to real control data (symbols, I/O, instance names) of the PLC under test at runtime.</p>
+        <p><span class="arch-k">Layer 4 — Execution:</span> drives the S7 PLC and the virtual model (fe.screen-sim) simultaneously; asserts in both directions — actuate virtual/observe PLC, actuate PLC/observe virtual.</p>
+        <span class="review-flag">DRAFT — review wording before publishing</span>
+      </div>
+      <div class="tab-pane" data-pane="impact">
+        <p>≈<span class="hl">22% lower testing cost per PLC</span> and ≈<span class="hl">28% shorter testing cycles</span>, measured across productive use. Test knowledge moved out of experts' heads into a reusable suite — the same test case now validates every station that uses the component. Patent-pending; rolled out to international Gen6 battery sites.</p>
+        <span class="review-flag">DRAFT — confirm figures &amp; phrasing for public use</span>
+      </div>
+      <div class="metric-row">
+        <div class="metric" data-count="22"><b>0%</b><span>testing cost / PLC</span></div>
+        <div class="metric" data-count="28"><b>0%</b><span>testing cycle time</span></div>
+      </div>
+      <div class="proj__tags"><span class="tag">Test Suite</span><span class="tag">Information Models</span><span class="tag">MBSE</span><span class="tag">S7-1500</span></div>
+    </div>
+    <div class="proj__viz">
+      <svg id="viz1" viewBox="0 0 640 410" xmlns="http://www.w3.org/2000/svg">
+        <rect x="20" y="14" width="420" height="60" fill="#141a21" stroke="#5ee6d0"/>
+        <text x="32" y="32" fill="#5ee6d0" font-family="JetBrains Mono, monospace" font-size="10" letter-spacing="1">TEST CASE <tspan id="v1-tc-mode" fill="#8b95a1">· ABSTRACT</tspan></text>
+        <text id="tc-line1" x="32" y="50" fill="#8b95a1" font-family="JetBrains Mono, monospace" font-size="9">test({COMPONENT}) → actuate → expect {ACK}</text>
+        <text id="tc-line2" x="32" y="66" fill="#8b95a1" font-family="JetBrains Mono, monospace" font-size="9">on FAIL → retest → report</text>
+
+        <rect x="20" y="88" width="420" height="240" fill="#0a0e14" stroke="#39434f"/>
+        <text x="32" y="106" fill="#39434f" font-family="JetBrains Mono, monospace" font-size="9">VIRTUAL MODEL · STATION 20</text>
+
+        <rect x="44" y="256" width="40" height="28" fill="#141a21" stroke="#5ee6d0"/>
+        <g id="v1-spin"><rect x="58" y="264" width="12" height="12" fill="none" stroke="#5ee6d0" stroke-width="1.4"/></g>
+        <text x="64" y="300" fill="#8b95a1" font-family="JetBrains Mono, monospace" font-size="8" text-anchor="middle">DRIVE M01</text>
+
+        <rect x="90" y="266" width="310" height="12" fill="none" stroke="#5ee6d0"/>
+        <line id="v1-belt" x1="92" y1="272" x2="398" y2="272" stroke="#2b6f64" stroke-width="3" stroke-dasharray="8 10"/>
+        <g id="v1-part" opacity="0"><rect x="100" y="248" width="22" height="18" fill="none" stroke="#f2a63a" stroke-width="1.4"/></g>
+        <text x="245" y="296" fill="#8b95a1" font-family="JetBrains Mono, monospace" font-size="8" text-anchor="middle">CONVEYOR C01</text>
+
+        <rect x="160" y="170" width="12" height="30" fill="none" stroke="#5ee6d0"/>
+        <g id="v1-cyl"><rect x="172" y="180" width="42" height="8" fill="none" stroke="#5ee6d0" stroke-width="1.3"/><rect x="208" y="176" width="9" height="16" fill="none" stroke="#5ee6d0" stroke-width="1.3"/></g>
+        <circle id="v1-cyl-sensor" cx="252" cy="184" r="4" fill="#39434f"/>
+        <text x="196" y="164" fill="#8b95a1" font-family="JetBrains Mono, monospace" font-size="8">CYL +K20</text>
+
+        <line x1="292" y1="128" x2="292" y2="230" stroke="#39434f"/>
+        <line x1="344" y1="128" x2="344" y2="230" stroke="#39434f"/>
+        <rect id="v1-door" x="294" y="130" width="48" height="46" fill="none" stroke="#5ee6d0" stroke-width="1.3"/>
+        <text x="318" y="122" fill="#8b95a1" font-family="JetBrains Mono, monospace" font-size="8" text-anchor="middle">DOOR D01</text>
+
+        <rect x="374" y="230" width="26" height="16" fill="none" stroke="#5ee6d0"/>
+        <g id="v1-arm1"><rect x="383" y="182" width="7" height="50" fill="none" stroke="#5ee6d0" stroke-width="1.3"/>
+          <g id="v1-arm2"><rect x="383" y="150" width="7" height="34" fill="none" stroke="#5ee6d0" stroke-width="1.3"/><rect x="379" y="142" width="15" height="9" fill="none" stroke="#f2a63a" stroke-width="1.3"/></g>
+        </g>
+        <text x="387" y="260" fill="#8b95a1" font-family="JetBrains Mono, monospace" font-size="8" text-anchor="middle">ROBOT R01</text>
+
+        <rect x="460" y="88" width="160" height="240" fill="#141a21" stroke="#39434f"/>
+        <text x="472" y="108" fill="#5ee6d0" font-family="JetBrains Mono, monospace" font-size="9" letter-spacing="1">TEST PLAN</text>
+        <g font-family="JetBrains Mono, monospace" font-size="9">
+          <text x="472" y="136" fill="#8b95a1">DRIVE M01</text><text id="v1-st-0" x="608" y="136" fill="#5f6b78" text-anchor="end">—</text>
+          <text x="472" y="166" fill="#8b95a1">CONVEYOR C01</text><text id="v1-st-1" x="608" y="166" fill="#5f6b78" text-anchor="end">—</text>
+          <text x="472" y="196" fill="#8b95a1">CYL +K20</text><text id="v1-st-2" x="608" y="196" fill="#5f6b78" text-anchor="end">—</text>
+          <text x="472" y="226" fill="#8b95a1">DOOR D01</text><text id="v1-st-3" x="608" y="226" fill="#5f6b78" text-anchor="end">—</text>
+          <text x="472" y="256" fill="#8b95a1">ROBOT R01</text><text id="v1-st-4" x="608" y="256" fill="#5f6b78" text-anchor="end">—</text>
+        </g>
+        <text id="v1-plcline" x="472" y="300" fill="#8b95a1" font-family="JetBrains Mono, monospace" font-size="8">PLC: idle</text>
+
+        <text id="v1-result" x="320" y="374" fill="#3ddc84" font-family="JetBrains Mono, monospace" font-size="11" text-anchor="middle" letter-spacing="2" opacity="0">STATION 20: 5/5 COMPONENTS PASSED · 1 RETEST</text>
+      </svg>
+      <div class="viz-bar">
+        <span class="viz-status" id="viz1-status">SUITE READY · 5 COMPONENTS DISCOVERED</span>
+        <button class="btn" onclick="runViz1()">RUN TEST SUITE</button>
+      </div>
+    </div>
+  </article>
+
+  <!-- 02 COLLISION -->
+  <article class="proj reveal" id="a-collision">
+    <div class="proj__viz">
+      <svg id="viz2" viewBox="0 0 640 430" xmlns="http://www.w3.org/2000/svg">
+        <rect x="20" y="12" width="600" height="30" fill="#141a21" stroke="#39434f"/>
+        <text x="32" y="32" fill="#8b95a1" font-family="JetBrains Mono, monospace" font-size="9">&gt; <tspan id="v2-query" fill="#eef1f4"></tspan><tspan fill="#5ee6d0">_</tspan></text>
+        <g id="v2-chips" font-family="JetBrains Mono, monospace" font-size="8" opacity="0">
+          <rect x="20" y="50" width="146" height="20" fill="none" stroke="#5ee6d0"/><text x="93" y="63" fill="#5ee6d0" text-anchor="middle">move_gantry(G02,pick)</text>
+          <rect x="174" y="50" width="146" height="20" fill="none" stroke="#5ee6d0"/><text x="247" y="63" fill="#5ee6d0" text-anchor="middle">rotate_robot(IR1,pick)</text>
+          <rect x="328" y="50" width="110" height="20" fill="none" stroke="#5ee6d0"/><text x="383" y="63" fill="#5ee6d0" text-anchor="middle">check_overlap()</text>
+          <text x="448" y="63" fill="#8b95a1">← AI sequence via MCP</text>
+        </g>
+
+        <rect x="20" y="82" width="600" height="290" fill="#0a0e14" stroke="#39434f"/>
+        <text x="32" y="100" fill="#39434f" font-family="JetBrains Mono, monospace" font-size="9">CELL 30 · TOP VIEW</text>
+
+        <line x1="60" y1="112" x2="600" y2="112" stroke="#39434f" stroke-width="2"/>
+        <line x1="60" y1="356" x2="600" y2="356" stroke="#39434f" stroke-width="2"/>
+        <g id="v2-gantry">
+          <rect id="v2-bridge" x="520" y="112" width="10" height="244" fill="#141a21" stroke="#5ee6d0" stroke-width="1.4"/>
+          <rect id="v2-trolley" x="513" y="200" width="24" height="24" fill="none" stroke="#5ee6d0" stroke-width="1.6"/>
+          <text id="v2-glabel" x="545" y="130" fill="#5ee6d0" font-family="JetBrains Mono, monospace" font-size="9">G02</text>
+        </g>
+
+        <rect x="40" y="318" width="560" height="14" fill="none" stroke="#39434f"/>
+        <line id="v2-beltH" x1="42" y1="325" x2="598" y2="325" stroke="#232c37" stroke-width="4" stroke-dasharray="10 12"/>
+        <rect x="96" y="130" width="14" height="188" fill="none" stroke="#39434f"/>
+        <line id="v2-beltV" x1="103" y1="132" x2="103" y2="316" stroke="#232c37" stroke-width="4" stroke-dasharray="10 12"/>
+
+        <rect x="40" y="140" width="46" height="112" fill="none" stroke="#39434f"/>
+        <line x1="40" y1="177" x2="86" y2="177" stroke="#39434f"/>
+        <line x1="40" y1="214" x2="86" y2="214" stroke="#39434f"/>
+        <g id="v2-lift"><rect x="44" y="222" width="38" height="24" fill="none" stroke="#f2a63a" stroke-width="1.3"/><rect x="52" y="228" width="20" height="12" fill="#f2a63a" opacity=".6"/></g>
+        <text x="63" y="266" fill="#8b95a1" font-family="JetBrains Mono, monospace" font-size="8" text-anchor="middle">STACKER S01</text>
+
+        <circle cx="330" cy="240" r="15" fill="#141a21" stroke="#5ee6d0" stroke-width="1.4"/>
+        <g id="v2-ir1arm"><rect x="326" y="168" width="8" height="72" fill="none" stroke="#5ee6d0" stroke-width="1.6"/><rect x="320" y="156" width="20" height="13" fill="none" stroke="#5ee6d0" stroke-width="1.6"/></g>
+        <text x="330" y="272" fill="#5ee6d0" font-family="JetBrains Mono, monospace" font-size="9" text-anchor="middle">IR1</text>
+        <circle id="v2-pickpos" cx="330" cy="160" r="20" fill="none" stroke="#f2a63a" stroke-dasharray="3 4" opacity=".7"/>
+        <text x="360" y="152" fill="#f2a63a" font-family="JetBrains Mono, monospace" font-size="8">PICK POS</text>
+
+        <circle cx="470" cy="180" r="13" fill="#141a21" stroke="#8b95a1" stroke-width="1.2"/>
+        <g id="v2-ir2arm"><rect x="466" y="122" width="8" height="58" fill="none" stroke="#8b95a1" stroke-width="1.4"/></g>
+        <text x="470" y="210" fill="#8b95a1" font-family="JetBrains Mono, monospace" font-size="9" text-anchor="middle">IR2</text>
+
+        <line id="v2-interlock" x1="400" y1="112" x2="400" y2="356" stroke="#f2a63a" stroke-dasharray="5 6" opacity="0"/>
+        <text id="v2-il-label" x="406" y="348" fill="#f2a63a" font-family="JetBrains Mono, monospace" font-size="8" opacity="0">INTERLOCK ZONE</text>
+
+        <rect id="v2-flash" x="20" y="82" width="600" height="290" fill="#e24b4a" opacity="0"/>
+        <circle id="v2-hitbox" cx="330" cy="180" r="34" fill="none" stroke="#e24b4a" stroke-width="2" opacity="0"/>
+        <text id="v2-result" x="320" y="404" font-family="JetBrains Mono, monospace" font-size="11" text-anchor="middle" letter-spacing="2" opacity="0" fill="#e24b4a">⚠ COLLISION: G02 TROLLEY ∩ IR1 GRIPPER @ PICK POS · VIDEO ATTACHED</text>
+      </svg>
+      <div class="viz-bar">
+        <span class="viz-status" id="viz2-status">CELL 30 LIVE · AWAITING PROMPT</span>
+        <div style="display:flex; gap:.5rem;">
+          <button class="btn" onclick="runViz2(false)">NO INTERLOCK</button>
+          <button class="btn" onclick="runViz2(true)">WITH INTERLOCK</button>
+        </div>
+      </div>
+    </div>
+    <div class="proj__info">
+      <p class="mod"><span class="led led--amber"></span>PROJECT 02 · AI + MCP · BMW</p>
+      <h3>AI-Driven Collision Detection</h3>
+      <div class="tabs"><button class="tab-btn on" data-tab="simple">Simple</button><button class="tab-btn" data-tab="arch">Architecture</button><button class="tab-btn" data-tab="impact">Impact</button></div>
+      <div class="tab-pane on" data-pane="simple">
+        <p>The test suite knows every position, robot, gantry and drive in the cell. Engineers used to hand-build collision scenarios sequence by sequence.</p>
+        <p>Now they just ask: <span class="hl">"Is there a collision between gantry G02 and robot IR1 in part-picking position?"</span> The AI resolves the components, writes the sequence through the suite's <span class="hl">MCP server</span>, executes it in the virtual cell — and returns the verdict <span class="hl">with a video</span>. Try both buttons: same question, with and without the interlock.</p>
+      </div>
+      <div class="tab-pane" data-pane="arch">
+        <p><span class="arch-k">MCP server:</span> embedded in the test suite, exposing its execution tools (move, rotate, check_overlap…) to the LLM.</p>
+        <p><span class="arch-k">Skill files:</span> describe every component type and tool, so the model knows what exists and how to drive it.</p>
+        <p><span class="arch-k">Entity resolution:</span> free-text "gantry G02", "robot IR1", "pick position" mapped to concrete suite objects.</p>
+        <p><span class="arch-k">Execution &amp; evidence:</span> sequence runs in the VC environment with automated collision checks; a rendered video accompanies every verdict so the engineer verifies at a glance.</p>
+        <span class="review-flag">DRAFT — review wording before publishing</span>
+      </div>
+      <div class="tab-pane" data-pane="impact">
+        <p>Scenario definition went from hand-built sequences to a typed sentence; while one scenario executes, the engineer is already formulating the next. Validation throughput rises without adding headcount, and video evidence makes results reviewable by anyone.</p>
+        <span class="review-flag">DRAFT — add concrete numbers if shareable</span>
+      </div>
+      <div class="proj__tags"><span class="tag">MCP Server</span><span class="tag">LLM Agents</span><span class="tag">Skill Files</span><span class="tag">Collision Checks</span></div>
+    </div>
+  </article>
+
+  <!-- 03 KNOWLEDGE ASSISTANT -->
+  <article class="proj reveal" id="a-know">
+    <div class="proj__info">
+      <p class="mod"><span class="led led--amber"></span>PROJECT 03 · AI / RAG · BMW</p>
+      <h3>PLC Knowledge Assistant</h3>
+      <div class="tabs"><button class="tab-btn on" data-tab="simple">Simple</button><button class="tab-btn" data-tab="arch">Architecture</button><button class="tab-btn" data-tab="impact">Impact</button></div>
+      <div class="tab-pane on" data-pane="simple">
+        <p>A locally hosted LLM with the whole engineering context embedded: <span class="hl">component library, planning data, control data and test plans in a vector database</span>, plus skill files that teach the model how to use them.</p>
+        <p>Ask it <span class="hl">"How has this cylinder changed over the last six months?"</span> and watch (right) how the question routes through the skill files into EPLAN data, control code and the test plan before the grounded answer comes back.</p>
+      </div>
+      <div class="tab-pane" data-pane="arch">
+        <p><span class="arch-k">Local hosting:</span> model runs on-machine — engineering data never leaves the premises.</p>
+        <p><span class="arch-k">Vector DB:</span> library elements, planning data and control data embedded for semantic retrieval.</p>
+        <p><span class="arch-k">Skill routing:</span> SKILL.MD files describe each data source and when to consult it; the model routes queries accordingly.</p>
+        <p><span class="arch-k">Grounded synthesis:</span> answers cite their sources — EPLAN revision, control data version, test plan station.</p>
+        <span class="review-flag">DRAFT — review wording before publishing</span>
+      </div>
+      <div class="tab-pane" data-pane="impact">
+        <p>Change tracing that used to mean manual archaeology across EPLAN exports and code diffs now takes one question. Test-plan triage ("which function group at station 20 needs attention?") comes back with failure counts and a recommendation. Also lowers the onboarding barrier for new engineers.</p>
+        <span class="review-flag">DRAFT — add concrete numbers if shareable</span>
+      </div>
+      <div class="proj__tags"><span class="tag">Local LLM</span><span class="tag">Vector DB</span><span class="tag">RAG</span><span class="tag">EPLAN Data</span><span class="tag">Skill Files</span></div>
+    </div>
+    <div class="proj__viz">
+      <svg id="viz5" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg">
+        <rect x="20" y="12" width="600" height="30" fill="#141a21" stroke="#39434f"/>
+        <text x="32" y="32" fill="#8b95a1" font-family="JetBrains Mono, monospace" font-size="9">&gt; <tspan id="v5-query" fill="#eef1f4"></tspan><tspan fill="#5ee6d0">_</tspan></text>
+
+        <rect x="60" y="130" width="120" height="46" fill="#141a21" stroke="#5ee6d0"/>
+        <text x="120" y="149" fill="#5ee6d0" font-family="JetBrains Mono, monospace" font-size="9" text-anchor="middle">SKILL.MD</text>
+        <text x="120" y="164" fill="#8b95a1" font-family="JetBrains Mono, monospace" font-size="8" text-anchor="middle">router</text>
+
+        <rect id="v5-n1" x="300" y="70" width="130" height="40" fill="#141a21" stroke="#39434f"/>
+        <text x="365" y="87" fill="#8b95a1" font-family="JetBrains Mono, monospace" font-size="9" text-anchor="middle">EPLAN DATA</text>
+        <text id="v5-s1" x="365" y="102" fill="#5ee6d0" font-family="JetBrains Mono, monospace" font-size="8" text-anchor="middle" opacity="0">r.418: 2-ch → 4-ch</text>
+
+        <rect id="v5-n2" x="300" y="132" width="130" height="40" fill="#141a21" stroke="#39434f"/>
+        <text x="365" y="149" fill="#8b95a1" font-family="JetBrains Mono, monospace" font-size="9" text-anchor="middle">CONTROL CODE</text>
+        <text id="v5-s2" x="365" y="164" fill="#5ee6d0" font-family="JetBrains Mono, monospace" font-size="8" text-anchor="middle" opacity="0">FB upd · ack I12.5</text>
+
+        <rect id="v5-n3" x="300" y="194" width="130" height="40" fill="#141a21" stroke="#39434f"/>
+        <text x="365" y="211" fill="#8b95a1" font-family="JetBrains Mono, monospace" font-size="9" text-anchor="middle">TEST PLAN</text>
+        <text id="v5-s3" x="365" y="226" fill="#5ee6d0" font-family="JetBrains Mono, monospace" font-size="8" text-anchor="middle" opacity="0">3 cases upd · PASS</text>
+
+        <path id="v5-p0" d="M120 42 L120 130" stroke="#39434f" fill="none"/>
+        <path id="v5-p1" d="M180 145 C240 145 250 90 300 90" stroke="#39434f" fill="none"/>
+        <path id="v5-p2" d="M180 153 L300 152" stroke="#39434f" fill="none"/>
+        <path id="v5-p3" d="M180 161 C240 161 250 214 300 214" stroke="#39434f" fill="none"/>
+        <path id="v5-p4" d="M430 152 C480 152 490 200 500 230 C505 245 505 250 505 258" stroke="#39434f" fill="none"/>
+        <circle id="v5-pkt" r="4" fill="#5ee6d0" opacity="0"/>
+
+        <rect x="20" y="258" width="600" height="130" fill="#141a21" stroke="#39434f"/>
+        <text x="34" y="278" fill="#f2a63a" font-family="JetBrains Mono, monospace" font-size="9" letter-spacing="1">ASSISTANT · LOCAL LLM</text>
+        <g font-family="JetBrains Mono, monospace" font-size="9">
+          <text id="v5-a1" x="34" y="302" fill="#eef1f4"></text>
+          <text id="v5-a2" x="34" y="322" fill="#eef1f4"></text>
+          <text id="v5-a3" x="34" y="342" fill="#eef1f4"></text>
+          <text id="v5-a4" x="34" y="366" fill="#8b95a1"></text>
+        </g>
+      </svg>
+      <div class="viz-bar">
+        <span class="viz-status" id="viz5-status">IDLE · 3 SOURCES INDEXED</span>
+        <button class="btn" onclick="runViz5()">ASK ASSISTANT</button>
+      </div>
+    </div>
+  </article>
+
+  <!-- 04 PROJECT COMPARISON -->
+  <article class="proj reveal" id="a-comp">
+    <div class="proj__viz">
+      <svg id="viz6" viewBox="0 0 640 360" xmlns="http://www.w3.org/2000/svg">
+        <text x="130" y="30" fill="#f2a63a" font-family="JetBrains Mono, monospace" font-size="10" text-anchor="middle" letter-spacing="1">MASTER STATION</text>
+        <text x="390" y="30" fill="#5ee6d0" font-family="JetBrains Mono, monospace" font-size="10" text-anchor="middle" letter-spacing="1">SISTER STATION</text>
+        <g id="v6-master"></g>
+        <g id="v6-sister"></g>
+        <line id="v6-scan" x1="30" y1="44" x2="490" y2="44" stroke="#5ee6d0" stroke-width="1.2" opacity="0"/>
+        <g font-family="JetBrains Mono, monospace" font-size="9">
+          <text x="530" y="30" fill="#8b95a1" letter-spacing="1">LLM REPORT</text>
+          <text x="530" y="70" fill="#e24b4a">HIGH</text>
+          <rect x="530" y="78" width="90" height="8" fill="#0a0e14" stroke="#39434f"/>
+          <rect id="v6-bar-h" x="530" y="78" width="0" height="8" fill="#e24b4a"/>
+          <text id="v6-n-h" x="530" y="102" fill="#8b95a1">0 changes</text>
+          <text x="530" y="134" fill="#f2a63a">MEDIUM</text>
+          <rect x="530" y="142" width="90" height="8" fill="#0a0e14" stroke="#39434f"/>
+          <rect id="v6-bar-m" x="530" y="142" width="0" height="8" fill="#f2a63a"/>
+          <text id="v6-n-m" x="530" y="166" fill="#8b95a1">0 changes</text>
+          <text x="530" y="198" fill="#3ddc84">LOW</text>
+          <rect x="530" y="206" width="90" height="8" fill="#0a0e14" stroke="#39434f"/>
+          <rect id="v6-bar-l" x="530" y="206" width="0" height="8" fill="#3ddc84"/>
+          <text id="v6-n-l" x="530" y="230" fill="#8b95a1">0 changes</text>
+        </g>
+        <text id="v6-result" x="320" y="340" fill="#8b95a1" font-family="JetBrains Mono, monospace" font-size="10" text-anchor="middle" letter-spacing="1" opacity="0">DETERMINISTIC DIFF → LLM CATEGORIZATION → PRIORITIZED REPORT</text>
+      </svg>
+      <div class="viz-bar">
+        <span class="viz-status" id="viz6-status">2 PROJECTS LOADED</span>
+        <button class="btn" onclick="runViz6()">COMPARE</button>
+      </div>
+    </div>
+    <div class="proj__info">
+      <p class="mod"><span class="led led--steel"></span>PROJECT 04 · HYBRID AI · BMW</p>
+      <h3>PLC Project Comparison, Master vs Sister</h3>
+      <div class="tabs"><button class="tab-btn on" data-tab="simple">Simple</button><button class="tab-btn" data-tab="arch">Architecture</button><button class="tab-btn" data-tab="impact">Impact</button></div>
+      <div class="tab-pane on" data-pane="simple">
+        <p>A Master Station and a Sister Station are near-copies with different PLC programs — comparing them by hand is a nightmare.</p>
+        <p>This pipeline diffs them <span class="hl">deterministically, function-block by function-block, network by network</span> — and only the actual differences are handed to an LLM, which <span class="hl">categorizes each change and judges its relevance</span>. Out comes a prioritized report.</p>
+      </div>
+      <div class="tab-pane" data-pane="arch">
+        <p><span class="arch-k">Export:</span> both TIA projects converted to XML in full.</p>
+        <p><span class="arch-k">Chunking:</span> XMLs broken into comparable units (FBs, networks).</p>
+        <p><span class="arch-k">Deterministic diff:</span> exact structural comparison — no AI in the loop where precision matters.</p>
+        <p><span class="arch-k">LLM classification:</span> structured diffs fed to the model, which assigns change categories and relevance, producing the high/medium/low report.</p>
+        <span class="review-flag">DRAFT — review wording before publishing</span>
+      </div>
+      <div class="tab-pane" data-pane="impact">
+        <p>Master/sister alignment reviews that took days of side-by-side reading collapse into a generated report; engineers start from the handful of high-priority changes instead of thousands of XML lines. Deterministic where it must be, AI where it helps.</p>
+        <span class="review-flag">DRAFT — add concrete numbers if shareable</span>
+      </div>
+      <div class="proj__tags"><span class="tag">XML Diffing</span><span class="tag">Deterministic + LLM</span><span class="tag">Change Categories</span><span class="tag">Reporting</span></div>
+    </div>
+  </article>
+
+  <!-- 05 RULE VALIDATION -->
+  <article class="proj reveal" id="a-rules">
+    <div class="proj__viz">
+      <svg id="viz4" viewBox="0 0 640 340" xmlns="http://www.w3.org/2000/svg">
+        <rect x="20" y="20" width="220" height="260" fill="#141a21" stroke="#39434f"/>
+        <text x="34" y="42" fill="#5ee6d0" font-family="JetBrains Mono, monospace" font-size="10" letter-spacing="1">RULESET.JSON</text>
+        <g font-family="JetBrains Mono, monospace" font-size="9" fill="#8b95a1">
+          <text x="34" y="66">{ "id": "R-01",</text>
+          <text x="34" y="82">  "naming": "FB_*" }</text>
+          <text x="34" y="104">{ "id": "R-02",</text>
+          <text x="34" y="120">  "safety_ack": true }</text>
+          <text x="34" y="142">{ "id": "R-03",</text>
+          <text x="34" y="158">  "max_nesting": 4 }</text>
+          <text x="34" y="180">{ "id": "R-04",</text>
+          <text x="34" y="196">  "no_hardcoded_io" }</text>
+        </g>
+        <g id="v4-checks" font-family="JetBrains Mono, monospace" font-size="10">
+          <text x="216" y="74" text-anchor="end" opacity="0" data-ok="1">✓</text>
+          <text x="216" y="112" text-anchor="end" opacity="0" data-ok="1">✓</text>
+          <text x="216" y="150" text-anchor="end" opacity="0" data-ok="0">✗</text>
+          <text x="216" y="188" text-anchor="end" opacity="0" data-ok="0">✗</text>
+        </g>
+        <rect x="280" y="20" width="340" height="260" fill="#0a0e14" stroke="#39434f"/>
+        <text x="294" y="42" fill="#f2a63a" font-family="JetBrains Mono, monospace" font-size="10" letter-spacing="1">CONTROL CODE · FB_Station20</text>
+        <g id="v4-code" font-family="JetBrains Mono, monospace" font-size="9" fill="#5f6b78">
+          <text x="294" y="66">NETWORK 1: IF "xStart" AND NOT "xFault"</text>
+          <text x="294" y="84">NETWORK 2:   CALL FB_Conveyor_Main</text>
+          <text x="294" y="102">NETWORK 3: IF "SafetyDoor" THEN ...</text>
+          <text x="294" y="120">NETWORK 4:     IF ... IF ... IF ... IF ...</text>
+          <text x="294" y="138">NETWORK 5:   SET %Q2.4  // hardcoded</text>
+          <text x="294" y="156">NETWORK 6:   CALL FB_Cylinder_+K20</text>
+          <text x="294" y="174">NETWORK 7: MOVE #Speed TO "MD100"</text>
+        </g>
+        <line id="v4-scan" x1="284" y1="56" x2="616" y2="56" stroke="#5ee6d0" stroke-width="1.4" opacity="0"/>
+        <g font-family="JetBrains Mono, monospace" font-size="10">
+          <text x="20" y="312" fill="#8b95a1">RULES CHECKED <tspan id="v4-total" fill="#eef1f4">0</tspan></text>
+          <text x="220" y="312" fill="#8b95a1">PASSED <tspan id="v4-pass" fill="#3ddc84">0</tspan></text>
+          <text x="360" y="312" fill="#8b95a1">VIOLATIONS <tspan id="v4-fail" fill="#e24b4a">0</tspan></text>
+        </g>
+      </svg>
+      <div class="viz-bar">
+        <span class="viz-status" id="viz4-status">RULESET LOADED</span>
+        <button class="btn" onclick="runViz4()">VALIDATE CODE</button>
+      </div>
+    </div>
+    <div class="proj__info">
+      <p class="mod"><span class="led led--cyan"></span>PROJECT 05 · INTERNSHIP · BMW</p>
+      <h3>PLC Rule &amp; Standards Validation Tool</h3>
+      <div class="tabs"><button class="tab-btn on" data-tab="simple">Simple</button><button class="tab-btn" data-tab="arch">Architecture</button><button class="tab-btn" data-tab="impact">Impact</button></div>
+      <div class="tab-pane on" data-pane="simple">
+        <p>Every PLC program has to follow house standards — naming conventions, safety acknowledgements, structural rules. Checking them by hand is slow and inconsistent.</p>
+        <p>We captured the standards as a <span class="hl">machine-readable ruleset in JSON</span>; the tool walks the control code, breaks it into pieces, and reports <span class="hl">which rules were violated and where</span>.</p>
+      </div>
+      <div class="tab-pane" data-pane="arch">
+        <p><span class="arch-k">Ruleset:</span> house standards formalized as JSON rule definitions.</p>
+        <p><span class="arch-k">Parser:</span> control code decomposed into checkable units.</p>
+        <p><span class="arch-k">Rule engine:</span> each unit validated against every applicable rule; violations collected with locations into a report.</p>
+        <span class="review-flag">DRAFT — review wording before publishing</span>
+      </div>
+      <div class="tab-pane" data-pane="impact">
+        <p>Standards compliance became a batch job instead of a review meeting — consistent, repeatable, and fast enough to run on every change. Reliable code and data quality downstream in simulation and commissioning.</p>
+        <span class="review-flag">DRAFT — add concrete numbers if shareable</span>
+      </div>
+      <div class="proj__tags"><span class="tag">JSON Rulesets</span><span class="tag">Static Analysis</span><span class="tag">Code Quality</span><span class="tag">TIA Portal</span></div>
+    </div>
+  </article>
+
+  <!-- 06 DIGITAL TWIN OVGU -->
+  <article class="proj reveal" id="a-twin">
+    <div class="proj__info">
+      <p class="mod"><span class="led led--steel"></span>PROJECT 06 · RESEARCH · OVGU MAGDEBURG</p>
+      <h3>Two-Way Digital Twin of a Miniature Production Line</h3>
+      <div class="tabs"><button class="tab-btn on" data-tab="simple">Simple</button><button class="tab-btn" data-tab="arch">Architecture</button><button class="tab-btn" data-tab="impact">Impact</button></div>
+      <div class="tab-pane on" data-pane="simple">
+        <p>A physical miniature manufacturing line in the university lab, mirrored one-to-one in <span class="hl">Tecnomatix Plant Simulation</span> over <span class="hl">OPC UA</span> — it's the live system running at the top of this page, HMI and all.</p>
+        <p>Genuinely bidirectional: stop the physical model and the simulation halts; start from the simulation and the physical line spins up.</p>
+      </div>
+      <div class="tab-pane" data-pane="arch">
+        <p><span class="arch-k">Connectivity:</span> OPC UA server/client linking the physical line's PLC with Plant Simulation.</p>
+        <p><span class="arch-k">Two-way binding:</span> state flows physical→virtual; commands flow both directions.</p>
+        <p><span class="arch-k">Dashboard:</span> web KPI dashboard for energy metrics and shop-floor information with dual-channel interaction.</p>
+        <span class="review-flag">DRAFT — review wording before publishing</span>
+      </div>
+      <div class="tab-pane" data-pane="impact">
+        <p>A working research foundation for shop-floor development — live energy monitoring, process insight, and a hands-on digital twin for students and researchers.</p>
+      </div>
+      <p style="font-family:var(--mono); font-size:.78rem; color:var(--accent);">↑ Live demo in the About section.</p>
+      <div class="proj__tags"><span class="tag">Tecnomatix</span><span class="tag">OPC UA</span><span class="tag">KPI Dashboard</span><span class="tag">Digital Twin</span></div>
+    </div>
+    <div class="proj__viz" style="justify-content:center; align-items:center;">
+      <svg viewBox="0 0 640 300" xmlns="http://www.w3.org/2000/svg">
+        <rect x="60" y="60" width="220" height="140" fill="#141a21" stroke="#f2a63a"/>
+        <text x="170" y="86" fill="#f2a63a" font-family="JetBrains Mono, monospace" font-size="11" text-anchor="middle" letter-spacing="1">PHYSICAL LINE</text>
+        <rect x="90" y="130" width="160" height="10" fill="#39434f"/>
+        <rect x="100" y="112" width="24" height="18" fill="#f2a63a"/>
+        <rect x="360" y="60" width="220" height="140" fill="#141a21" stroke="#5ee6d0"/>
+        <text x="470" y="86" fill="#5ee6d0" font-family="JetBrains Mono, monospace" font-size="11" text-anchor="middle" letter-spacing="1">PLANT SIMULATION</text>
+        <rect x="390" y="130" width="160" height="10" fill="none" stroke="#5ee6d0"/>
+        <rect x="400" y="112" width="24" height="18" fill="none" stroke="#5ee6d0"/>
+        <path d="M280 110 L360 110" stroke="#f2a63a" stroke-width="1.4"/>
+        <path d="M360 150 L280 150" stroke="#5ee6d0" stroke-width="1.4"/>
+        <text x="320" y="102" fill="#8b95a1" font-family="JetBrains Mono, monospace" font-size="9" text-anchor="middle">STATE →</text>
+        <text x="320" y="168" fill="#8b95a1" font-family="JetBrains Mono, monospace" font-size="9" text-anchor="middle">← CONTROL</text>
+        <text x="320" y="240" fill="#8b95a1" font-family="JetBrains Mono, monospace" font-size="10" text-anchor="middle" letter-spacing="2">OPC UA · TWO-WAY INTERACTION</text>
+      </svg>
+      <div class="viz-bar" style="width:100%;">
+        <span class="viz-status">ARCHITECTURE VIEW · LIVE DEMO IN ABOUT ↑</span>
+        <button class="btn" onclick="document.getElementById('about').scrollIntoView({behavior:'smooth'})">OPEN TWIN</button>
+      </div>
+    </div>
+  </article>
+</section>
+
+<footer class="contact" id="contact">
+  <p class="eyebrow reveal"><span class="dot"></span>STATUS: READY FOR NEW SIGNAL</p>
+  <h2 class="section-title reveal">Let's sync up</h2>
+  <a class="contact__email reveal" href="mailto:ambaprasad.hegde@gmail.com">ambaprasad.hegde@gmail.com</a>
+  <div class="contact__links reveal">
+    <a href="https://www.linkedin.com/in/ambaprasad-hegde/" target="_blank" rel="noopener">LinkedIn</a>
+    <a href="#">GitHub</a>
+    <a href="#" id="gen-tc" onclick="return genTestCase()">Generate Test Case</a>
+  </div>
+  <details class="eggs reveal">
+    <summary>// Did you find all the easter eggs? <span id="egg-count">0/6 this session</span></summary>
+    <div>
+      01 · ENGINEERING MODE — a certain legendary key sequence<br>
+      02 · RAW STACK — some status lines reward persistence (×5)<br>
+      03 · ALARM A-041 — patience. it finds you<br>
+      04 · TC GENERATOR — it's hiding in plain sight<br>
+      05 · SUDO — for those who type before they think<br>
+      06 · HANAMI — this portfolio had a previous life. one click remembers it
+    </div>
+  </details>
+  <div class="build-tag" id="build-tag">REV 2026.07 · PORTFOLIO v1.1 · PHYSICAL ⇄ VIRTUAL</div>
+</footer>
+
+<div id="toasts"></div>
+<div id="stack-modal"><div class="sm-box">
+<span class="k">// RAW TECHNICAL STACK — you clicked 5 times, you earned this</span><br><br>
+{ "frontend": "vanilla HTML/CSS/JS + Three.js r128",<br>
+&nbsp;&nbsp;"3d": "dual-material meshes, wireframe⇄solid mix",<br>
+&nbsp;&nbsp;"twin_sim": "state machine A→B→C→D @ 60fps rAF",<br>
+&nbsp;&nbsp;"viz": "hand-rolled SVG timelines, zero libraries",<br>
+&nbsp;&nbsp;"fonts": ["Space Grotesk","IBM Plex Sans","JetBrains Mono"],<br>
+&nbsp;&nbsp;"tracking": "none. obviously.",<br>
+&nbsp;&nbsp;"engineer_runtime": "C#/.NET · Python · SCL/LAD · OPC UA · MCP" }<br><br>
+<button class="btn" onclick="document.getElementById('stack-modal').classList.remove('on')">CLOSE</button>
+</div></div>
+
+<script>
+// ===== BOOT =====
+(function(){
+  const lines=document.querySelectorAll('#boot .boot-line');
+  lines.forEach((l,i)=>setTimeout(()=>l.classList.add('on'),200+i*260));
+  setTimeout(()=>document.getElementById('boot').classList.add('done'),200+lines.length*260+500);
+})();
+// ===== CURSOR =====
+(function(){
+  const c=document.getElementById('cursor');
+  document.addEventListener('mousemove',e=>{c.style.left=e.clientX+'px';c.style.top=e.clientY+'px';});
+  document.addEventListener('mouseover',e=>{c.classList.toggle('is-hover',!!e.target.closest('a,button,.station__head,.tab-btn,#mode-toggle,summary'));});
+})();
+// ===== PROBE =====
+(function(){
+  const probe=document.getElementById('probe');
+  const pt=probe.querySelector('.p-title'),pb=probe.querySelector('.p-body');
+  document.addEventListener('mousemove',e=>{
+    const el=e.target.closest('[data-probe]');
+    if(el){const [t,b]=el.getAttribute('data-probe').split('|');pt.textContent=t;pb.textContent=b;
+      probe.style.display='block';probe.style.left=Math.min(e.clientX+18,innerWidth-260)+'px';probe.style.top=(e.clientY+18)+'px';
+    } else probe.style.display='none';
+  });
+})();
+// ===== TOASTS & EGGS =====
+const Eggs=(function(){
+  const found=new Set();
+  function count(){const el=document.getElementById('egg-count');if(el)el.textContent=found.size+'/6 this session';}
+  return {mark(n){if(!found.has(n)){found.add(n);count();}}};
+})();
+function toast(title,body,opts){
+  opts=opts||{};
+  const t=document.createElement('div');
+  t.className='toast'+(opts.alarm?' alarm':'');
+  t.innerHTML='<div class="t-title">'+title+'</div><div>'+body+'</div>';
+  if(opts.actions){
+    const a=document.createElement('div');a.className='t-actions';
+    opts.actions.forEach(([label,fn])=>{
+      const b=document.createElement('button');b.className='btn';b.style.fontSize='.6rem';b.textContent=label;
+      b.onclick=()=>{fn&&fn();t.remove();};a.appendChild(b);
+    });
+    t.appendChild(a);
+  }
+  document.getElementById('toasts').appendChild(t);
+  if(!opts.sticky) setTimeout(()=>t.remove(),opts.ttl||6000);
+}
+// ===== MODE TOGGLE =====
+document.getElementById('mode-toggle').addEventListener('click',()=>{document.body.classList.toggle('mode-physical');});
+// ===== TABS =====
+document.querySelectorAll('.proj__info').forEach(info=>{
+  info.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      info.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('on'));
+      info.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('on'));
+      btn.classList.add('on');
+      info.querySelector('.tab-pane[data-pane="'+btn.dataset.tab+'"]').classList.add('on');
+    });
+  });
+});
+// ===== STATIONS (timeline accordion) =====
+document.querySelectorAll('.station__head').forEach(h=>{
+  h.addEventListener('click',()=>h.parentElement.classList.toggle('open'));
+});
+
+// ===== 3D FACTORY HERO =====
+(function(){
+  const canvas=document.getElementById('factory-canvas');
+  const hero=document.getElementById('hero');
+  let W=hero.clientWidth,H=hero.clientHeight;
+  const scene=new THREE.Scene();
+  const camera=new THREE.PerspectiveCamera(40,W/H,.1,140);
+  const renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true});
+  renderer.setSize(W,H);renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  scene.add(new THREE.AmbientLight(0x8b95a1,.45));
+  const key=new THREE.PointLight(0x5ee6d0,1.6,70);key.position.set(6,10,7);scene.add(key);
+  const rim=new THREE.PointLight(0xf2a63a,.8,60);rim.position.set(-9,5,-6);scene.add(rim);
+  const fill=new THREE.PointLight(0x8b95a1,.35,60);fill.position.set(0,4,-10);scene.add(fill);
+
+  const wires=[],solids=[];
+  const plant=new THREE.Group();scene.add(plant);
+  plant.position.set(innerWidth<920?0:1.2,-1.15,0);
+  function dual(geo,color,parent){
+    const g=new THREE.Group();
+    const w=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:0x5ee6d0,wireframe:true,transparent:true,opacity:1}));
+    const s=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:color,metalness:.55,roughness:.42,transparent:true,opacity:0}));
+    wires.push(w.material);solids.push(s.material);
+    g.add(w,s);(parent||plant).add(g);return g;
+  }
+  const lerp=(a,b,k)=>a+(b-a)*k;
+  const ease=k=>k*k*(3-2*k);
+  function alerp(a,b,k){let d=b-a;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+=2*Math.PI;return a+d*k;}
+
+  // ---- floor & grid ----
+  const grid=new THREE.GridHelper(32,64,0x2b6f64,0x18242e);
+  grid.material.transparent=true;plant.add(grid);
+  const floorMat=new THREE.MeshStandardMaterial({color:0x10151c,metalness:.15,roughness:.92,transparent:true,opacity:0});
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(34,22),floorMat);
+  floor.rotation.x=-Math.PI/2;floor.position.y=-.01;plant.add(floor);
+
+  // ---- single main conveyor (the line) ----
+  const BELT_Z=-0.6, BELT_TOP=1.01, BOXC=BELT_TOP+.21;
+  (function(){
+    const len=11.8;
+    dual(new THREE.BoxGeometry(len,.22,1.1),0x39434f).position.set(0,.9,BELT_Z);
+    [-.52,.52].forEach(off=>{
+      dual(new THREE.BoxGeometry(len,.09,.09),0x2a3340).position.set(0,1.06,BELT_Z+off);
+    });
+    for(let i=0;i<6;i++){
+      const x=-5.3+i*2.12;
+      dual(new THREE.BoxGeometry(.13,.9,.9),0x232c37).position.set(x,.45,BELT_Z);
+    }
+  })();
+
+  // ---- drill press over the line ----
+  const press=new THREE.Group();plant.add(press);press.position.set(.3,0,BELT_Z);
+  [[-.7,-.75],[-.7,.75],[.7,-.75],[.7,.75]].forEach(([x,z])=>{
+    dual(new THREE.BoxGeometry(.15,2.3,.15),0x39434f,press).position.set(x,1.15,z);
+  });
+  dual(new THREE.BoxGeometry(1.7,.15,.15),0x39434f,press).position.set(0,2.3,-.75);
+  dual(new THREE.BoxGeometry(1.7,.15,.15),0x39434f,press).position.set(0,2.3,.75);
+  dual(new THREE.BoxGeometry(.15,.15,1.65),0x39434f,press).position.set(0,2.3,0);
+  const spindle=new THREE.Group();press.add(spindle);spindle.position.y=2.42;
+  dual(new THREE.CylinderGeometry(.16,.16,.6,10),0xc7ccd1,spindle);
+  const bit=dual(new THREE.CylinderGeometry(.04,.04,.55,8),0xf2a63a,spindle);bit.position.y=-.55;
+
+  // ---- pallet rack (input/output store) ----
+  const RACK_X=-8.7, RACK_Z=BELT_Z;
+  const rack=new THREE.Group();plant.add(rack);rack.position.set(RACK_X,0,RACK_Z);
+  [[-.5,-1],[-.5,1],[.5,-1],[.5,1]].forEach(([x,z])=>{
+    dual(new THREE.BoxGeometry(.1,2.5,.1),0x39434f,rack).position.set(x,1.25,z);
+  });
+  [0.55,1.35,2.15].forEach(y=>{
+    dual(new THREE.BoxGeometry(1.05,.08,2.05),0x2a3340,rack).position.y=y;
+  });
+  // dressing stock
+  [[0.55,-1.1],[0.55,0.4],[1.35,-1.15],[2.15,0.1]].forEach(([y,z])=>{
+    dual(new THREE.BoxGeometry(.42,.4,.42),0xc7ccd1,rack).position.set(0,y+.25,z);
+  });
+  const SLOT=new THREE.Vector3(RACK_X,1.6,RACK_Z); // active pick/restock slot (middle shelf)
+
+  // ---- output pallet ----
+  const PAL=new THREE.Vector3(7.7,0,1.7);
+  dual(new THREE.BoxGeometry(1.25,.12,1.25),0x2a3340).position.set(PAL.x,.06,PAL.z);
+
+  // ---- IK robots ----
+  const L1=1.35,L2=1.15,TIPLEN=.42,SH_Y=1.25;
+  function makeRobot(x,z){
+    const root=new THREE.Group();plant.add(root);root.position.set(x,0,z);
+    dual(new THREE.CylinderGeometry(.55,.62,.35,14),0x2a3340,root).position.y=.17;
+    const yawG=new THREE.Group();root.add(yawG);yawG.position.y=.35;
+    dual(new THREE.CylinderGeometry(.28,.32,.9,12),0x39434f,yawG).position.y=.45;
+    const shG=new THREE.Group();yawG.add(shG);shG.position.y=.9;
+    dual(new THREE.BoxGeometry(.24,L1,.24),0xf2a63a,shG).position.y=L1/2;
+    const elG=new THREE.Group();shG.add(elG);elG.position.y=L1;
+    dual(new THREE.BoxGeometry(.19,L2,.19),0xf2a63a,elG).position.y=L2/2;
+    const wrG=new THREE.Group();elG.add(wrG);wrG.position.y=L2;
+    dual(new THREE.BoxGeometry(.3,.14,.3),0xc7ccd1,wrG).position.y=.07;
+    dual(new THREE.BoxGeometry(.06,.24,.1),0xc7ccd1,wrG).position.set(-.1,.26,0);
+    dual(new THREE.BoxGeometry(.06,.24,.1),0xc7ccd1,wrG).position.set(.1,.26,0);
+    const home={psi:Math.PI/2,a:.55,b:1.0,w:Math.PI-1.55};
+    const rb={base:new THREE.Vector3(x,0,z),yawG,shG,elG,wrG,home,pose:{...home},_from:null,_to:null};
+    rb.apply=function(){
+      yawG.rotation.y=rb.pose.psi;
+      shG.rotation.z=rb.pose.a;
+      elG.rotation.z=rb.pose.b;
+      wrG.rotation.z=rb.pose.w;
+    };
+    rb.apply();
+    return rb;
+  }
+  function ik(base,t){
+    const dx=t.x-base.x,dz=t.z-base.z;
+    const psi=Math.atan2(dz,-dx);
+    const r=Math.hypot(dx,dz);
+    const h=t.y-SH_Y;
+    let d=Math.hypot(r,h);d=Math.min(d,L1+L2-.01);
+    const theta=Math.atan2(r,h);
+    const delta=Math.acos(Math.max(-1,Math.min(1,(L1*L1+d*d-L2*L2)/(2*L1*d))));
+    const a=theta-delta;
+    const b=Math.atan2(r-L1*Math.sin(a),h-L1*Math.cos(a))-a;
+    return {psi,a,b,w:Math.PI-a-b};
+  }
+  function tipOf(rb){
+    const p=rb.pose;
+    const hx=-Math.cos(p.psi),hz=Math.sin(p.psi);
+    const r=L1*Math.sin(p.a)+L2*Math.sin(p.a+p.b)+TIPLEN*Math.sin(p.a+p.b+p.w);
+    const y=SH_Y+L1*Math.cos(p.a)+L2*Math.cos(p.a+p.b)+TIPLEN*Math.cos(p.a+p.b+p.w);
+    return new THREE.Vector3(rb.base.x+r*hx,y,rb.base.z+r*hz);
+  }
+  const armA=makeRobot(-7.0,BELT_Z);
+  const armB=makeRobot(6.9,0.35);
+
+  // ---- gantry crane ----
+  [[-8.4,-4.7],[-8.4,4.7],[8.4,-4.7],[8.4,4.7]].forEach(([x,z])=>{
+    dual(new THREE.BoxGeometry(.22,3.7,.22),0x39434f).position.set(x,1.85,z);
+  });
+  dual(new THREE.BoxGeometry(17.2,.2,.26),0x39434f).position.set(0,3.7,-4.7);
+  dual(new THREE.BoxGeometry(17.2,.2,.26),0x39434f).position.set(0,3.7,4.7);
+  const bridge=new THREE.Group();plant.add(bridge);
+  dual(new THREE.BoxGeometry(.28,.24,9.7),0x5e6a78,bridge).position.y=3.95;
+  const trolley=new THREE.Group();bridge.add(trolley);
+  dual(new THREE.BoxGeometry(.55,.3,.55),0xf2a63a,trolley).position.y=3.72;
+  const cable=dual(new THREE.CylinderGeometry(.022,.022,1,6),0xc7ccd1,trolley);
+  const hook=dual(new THREE.BoxGeometry(.34,.2,.34),0xc7ccd1,trolley);
+  const gantry={x:3.0,z:-2.2,drop:1.1};
+  function applyGantry(){
+    bridge.position.x=gantry.x;
+    trolley.position.z=gantry.z;
+    cable.scale.y=gantry.drop;
+    cable.position.y=3.6-gantry.drop/2;
+    hook.position.y=3.6-gantry.drop;
+  }
+  applyGantry();
+  const hookPoint=()=>new THREE.Vector3(gantry.x,3.6-gantry.drop,gantry.z);
+
+  // ---- AGV ----
+  const agv=new THREE.Group();plant.add(agv);
+  dual(new THREE.BoxGeometry(1.15,.26,.72),0x39434f,agv).position.y=.2;
+  const beaconMat=new THREE.MeshBasicMaterial({color:0xe24b4a,transparent:true});
+  const beacon=new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,.12,8),beaconMat);
+  beacon.position.set(-.42,.42,0);agv.add(beacon);
+  const AGV_WAIT=new THREE.Vector3(-6.2,0,3.4);
+  agv.position.copy(AGV_WAIT);
+  function agvDrive(from,to,k){
+    agv.position.lerpVectors(from,to,k);
+    const dx=to.x-from.x,dz=to.z-from.z;
+    if(Math.hypot(dx,dz)>.01)agv.rotation.y=Math.atan2(-dz,dx);
+  }
+
+  // ---- stack light ----
+  dual(new THREE.CylinderGeometry(.05,.05,1.1,8),0x39434f).position.set(1.9,.55,-1.9);
+  const slMats=[0xe24b4a,0xf2a63a,0x3ddc84].map(c=>new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:.18}));
+  slMats.forEach((m,i)=>{
+    const lens=new THREE.Mesh(new THREE.CylinderGeometry(.13,.13,.16,10),m);
+    lens.position.set(1.9,1.18+i*.19,-1.9);plant.add(lens);
+  });
+  let lightState=2; // 0 red 1 amber 2 green
+
+  // ---- scan plane (virtual only) ----
+  const scanMat=new THREE.MeshBasicMaterial({color:0x5ee6d0,transparent:true,opacity:.07,side:THREE.DoubleSide,depthWrite:false});
+  const scan=new THREE.Mesh(new THREE.PlaneGeometry(12,4.6),scanMat);
+  scan.rotation.y=Math.PI/2;scan.position.y=2.3;plant.add(scan);
+
+  // ---- the part ----
+  const part=dual(new THREE.BoxGeometry(.42,.4,.42),0xf2a63a);
+  part.position.copy(SLOT);
+  const partWireM=part.children[0].material, partSolidM=part.children[1].material;
+  function setProcessed(on){
+    partSolidM.color.set(on?0x3ddc84:0xf2a63a);
+    partWireM.color.set(on?0x3ddc84:0x5ee6d0);
+  }
+  let carrier=null; // 'A'|'B'|'hook'|'agv'|null
+
+  // ---- sequence engine ----
+  const seq=[];let stage='INIT';
+  function step(d,fn,onStart,label){seq.push({d,fn,onStart,label});}
+  function armStep(rb,d,tipTarget,label){
+    step(d,k=>{
+      const p=rb._from,q=rb._to;
+      rb.pose={psi:alerp(p.psi,q.psi,k),a:lerp(p.a,q.a,k),b:lerp(p.b,q.b,k),w:lerp(p.w,q.w,k)};
+      rb.apply();
+    },()=>{
+      rb._from={...rb.pose};
+      rb._to=tipTarget?ik(rb.base,tipTarget()):{...rb.home};
+    },label);
+  }
+  const hover=(v,dy)=>new THREE.Vector3(v.x,v.y+dy,v.z);
+  const SLOT_TOP=new THREE.Vector3(SLOT.x,SLOT.y+.21,SLOT.z);
+  const BELT_START=new THREE.Vector3(-5.4,BOXC,BELT_Z);
+  const BELT_START_TOP=hover(BELT_START,.21);
+  const BELT_END=new THREE.Vector3(5.6,BOXC,BELT_Z);
+  const BELT_END_TOP=hover(BELT_END,.21);
+  const PAL_BOX=new THREE.Vector3(PAL.x,.33,PAL.z);
+  const PAL_BOX_TOP=hover(PAL_BOX,.21);
+
+  // 1. Robot A: rack → belt
+  armStep(armA,1.0,()=>hover(SLOT_TOP,.35),'PICK · RACK');
+  armStep(armA,0.5,()=>SLOT_TOP,'PICK · RACK');
+  step(.25,null,()=>{carrier='A';},'PICK · RACK');
+  armStep(armA,0.5,()=>hover(SLOT_TOP,.45),'TRANSFER · TO LINE');
+  armStep(armA,1.35,()=>hover(BELT_START_TOP,.5),'TRANSFER · TO LINE');
+  armStep(armA,0.55,()=>BELT_START_TOP,'TRANSFER · TO LINE');
+  step(.25,null,()=>{carrier=null;part.position.copy(BELT_START);},'TRANSFER · TO LINE');
+  // 2. convey to press (arm A homes concurrently)
+  step(2.3,k=>{
+    part.position.x=lerp(BELT_START.x,.3,k);
+    const k2=Math.min(k*2.2,1);
+    const p=armA._from,q=armA._to;
+    armA.pose={psi:alerp(p.psi,q.psi,k2),a:lerp(p.a,q.a,k2),b:lerp(p.b,q.b,k2),w:lerp(p.w,q.w,k2)};
+    armA.apply();
+  },()=>{armA._from={...armA.pose};armA._to={...armA.home};},'CONVEY · TO PRESS');
+  // 3. drill
+  step(.45,k=>{spindle.position.y=lerp(2.42,2.16,k);},()=>{lightState=1;},'DRILL · PLUNGE');
+  step(.9,null,()=>{},'DRILL · CYCLE');
+  step(.45,k=>{spindle.position.y=lerp(2.16,2.42,k);},()=>{setProcessed(true);},'DRILL · RETRACT');
+  // 4. convey to end
+  step(2.2,k=>{part.position.x=lerp(.3,BELT_END.x,k);},()=>{lightState=2;},'CONVEY · TO PICKUP');
+  // 5. Robot B: belt → pallet
+  armStep(armB,0.9,()=>hover(BELT_END_TOP,.4),'PICK · LINE END');
+  armStep(armB,0.5,()=>BELT_END_TOP,'PICK · LINE END');
+  step(.25,null,()=>{carrier='B';},'PICK · LINE END');
+  armStep(armB,0.5,()=>hover(BELT_END_TOP,.5),'PLACE · PALLET');
+  armStep(armB,1.2,()=>hover(PAL_BOX_TOP,.55),'PLACE · PALLET');
+  armStep(armB,0.6,()=>PAL_BOX_TOP,'PLACE · PALLET');
+  step(.25,null,()=>{carrier=null;part.position.copy(PAL_BOX);},'PLACE · PALLET');
+  // 6. gantry: pallet → AGV (arm B homes concurrently)
+  step(1.6,k=>{
+    gantry.x=lerp(gantry._x0,PAL.x,k);gantry.z=lerp(gantry._z0,PAL.z,k);applyGantry();
+    const k2=Math.min(k*1.8,1);
+    const p=armB._from,q=armB._to;
+    armB.pose={psi:alerp(p.psi,q.psi,k2),a:lerp(p.a,q.a,k2),b:lerp(p.b,q.b,k2),w:lerp(p.w,q.w,k2)};
+    armB.apply();
+  },()=>{gantry._x0=gantry.x;gantry._z0=gantry.z;armB._from={...armB.pose};armB._to={...armB.home};},'CRANE · APPROACH');
+  step(.8,k=>{gantry.drop=lerp(1.1,2.97,k);applyGantry();},null,'CRANE · LOWER');
+  step(.2,null,()=>{carrier='hook';},'CRANE · GRIP');
+  step(.8,k=>{gantry.drop=lerp(2.97,1.1,k);applyGantry();},null,'CRANE · HOIST');
+  step(2.2,k=>{gantry.x=lerp(PAL.x,AGV_WAIT.x,k);gantry.z=lerp(PAL.z,AGV_WAIT.z,k);applyGantry();},null,'CRANE · TRAVERSE');
+  step(.8,k=>{gantry.drop=lerp(1.1,2.76,k);applyGantry();},null,'CRANE · LOWER');
+  step(.2,null,()=>{carrier='agv';},'HANDOFF · TO AGV');
+  step(.6,k=>{gantry.drop=lerp(2.76,1.1,k);applyGantry();},null,'HANDOFF · TO AGV');
+  // 7. AGV returns part to rack (gantry parks concurrently)
+  const AGV_P1=new THREE.Vector3(-8.7,0,3.4), AGV_P2=new THREE.Vector3(-8.7,0,1.2);
+  step(2.2,k=>{
+    agvDrive(AGV_WAIT,AGV_P1,k);
+    gantry.x=lerp(AGV_WAIT.x,3.0,k);gantry.z=lerp(AGV_WAIT.z,-2.2,k);applyGantry();
+  },null,'AGV · RETURN RUN');
+  step(1.5,k=>{agvDrive(AGV_P1,AGV_P2,k);},null,'AGV · RETURN RUN');
+  step(1.0,k=>{
+    const from=agvTop(), mid=new THREE.Vector3(lerp(from.x,SLOT.x,.5),2.2,lerp(from.z,SLOT.z,.5));
+    const a=new THREE.Vector3().lerpVectors(from,mid,k), b=new THREE.Vector3().lerpVectors(mid,SLOT,k);
+    part.position.lerpVectors(a,b,k);
+  },()=>{carrier=null;},'RESTOCK · RACK');
+  step(.2,null,()=>{part.position.copy(SLOT);setProcessed(false);},'RESTOCK · RACK');
+  step(1.5,k=>{agvDrive(AGV_P2,AGV_P1,k);},null,'AGV · TO STANDBY');
+  step(2.0,k=>{agvDrive(AGV_P1,AGV_WAIT,k);},null,'AGV · TO STANDBY');
+  step(.8,null,()=>{},'CYCLE · COMPLETE');
+
+  function agvTop(){return new THREE.Vector3(agv.position.x,.54,agv.position.z);}
+  let si=0,stime=0,started=false;
+  function runSeq(dt){
+    const s=seq[si];
+    if(!started){s.onStart&&s.onStart();started=true;stage=s.label||stage;}
+    stime+=dt;
+    const k=ease(Math.min(stime/s.d,1));
+    s.fn&&s.fn(k);
+    if(stime>=s.d){si=(si+1)%seq.length;stime=0;started=false;}
+  }
+  function glue(){
+    if(carrier==='A'){const t=tipOf(armA);part.position.set(t.x,t.y-.21,t.z);}
+    else if(carrier==='B'){const t=tipOf(armB);part.position.set(t.x,t.y-.21,t.z);}
+    else if(carrier==='hook'){const h=hookPoint();part.position.set(h.x,h.y-.31,h.z);}
+    else if(carrier==='agv'){part.position.copy(agvTop());}
+  }
+
+  // ---- interaction: rotate + zoom ----
+  let dragging=false,px0=0,py0=0,autoRot=true;
+  let camDist=13.2,camDistT=13.2;
+  const ZMIN=5.2,ZMAX=18;
+  hero.addEventListener('mousedown',e=>{dragging=true;px0=e.clientX;py0=e.clientY;autoRot=false;});
+  window.addEventListener('mouseup',()=>{dragging=false;setTimeout(()=>autoRot=true,4500);});
+  window.addEventListener('mousemove',e=>{
+    if(!dragging)return;
+    plant.rotation.y+=(e.clientX-px0)*.005;
+    plant.rotation.x=Math.max(-.18,Math.min(.5,plant.rotation.x+(e.clientY-py0)*.003));
+    px0=e.clientX;py0=e.clientY;
+  });
+  let pinch0=0;
+  hero.addEventListener('touchstart',e=>{
+    if(e.touches.length===2){pinch0=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);}
+    else{dragging=true;px0=e.touches[0].clientX;py0=e.touches[0].clientY;autoRot=false;}
+  },{passive:true});
+  hero.addEventListener('touchend',()=>{dragging=false;pinch0=0;setTimeout(()=>autoRot=true,4500);});
+  hero.addEventListener('touchmove',e=>{
+    if(e.touches.length===2&&pinch0>0){
+      const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+      camDistT=Math.max(ZMIN,Math.min(ZMAX,camDistT*pinch0/d));pinch0=d;
+    } else if(dragging){
+      plant.rotation.y+=(e.touches[0].clientX-px0)*.005;
+      px0=e.touches[0].clientX;py0=e.touches[0].clientY;
+    }
+  },{passive:true});
+  hero.addEventListener('wheel',e=>{
+    if(!(e.ctrlKey||e.metaKey))return;
+    e.preventDefault();
+    camDistT=Math.max(ZMIN,Math.min(ZMAX,camDistT*(1+e.deltaY*.0012)));
+  },{passive:false});
+  hero.addEventListener('dblclick',()=>{camDistT=camDistT>9?6.4:13.2;});
+  const zi=document.getElementById('zoom-in'),zo=document.getElementById('zoom-out');
+  if(zi)zi.addEventListener('click',()=>{camDistT=Math.max(ZMIN,camDistT*.78);});
+  if(zo)zo.addEventListener('click',()=>{camDistT=Math.min(ZMAX,camDistT*1.28);});
+
+  // ---- animate ----
+  let mix=0,t=0,last=performance.now();
+  const hud=document.getElementById('hud-mode');
+  function anim(now){
+    requestAnimationFrame(anim);
+    const dt=Math.min((now-last)/1000,.05);last=now;t+=dt;
+    const isPhys=document.body.classList.contains('mode-physical');
+    mix+=((isPhys?1:0)-mix)*.05;
+    wires.forEach(m=>m.opacity=1-mix*.94);
+    solids.forEach(m=>m.opacity=mix);
+    grid.material.opacity=(1-mix)*.85;
+    floorMat.opacity=mix*.95;
+    scanMat.opacity=(1-mix)*.075;
+    key.color.set(isPhys?0xf2a63a:0x5ee6d0);
+
+    runSeq(dt);
+    glue();
+    bit.rotation.y+=dt*(stage.startsWith('DRILL')?34:5);
+    beaconMat.opacity=.3+(Math.sin(t*7)>0?.7:0);
+    slMats.forEach((m,i)=>m.opacity=i===lightState?.95:.15);
+    scan.position.x=Math.sin(t*.32)*7.4;
+    if(autoRot&&!dragging)plant.rotation.y+=dt*.07;
+    camDist+=(camDistT-camDist)*.06;
+    camera.position.set(0,camDist*.44,camDist);
+    camera.lookAt(0,.7,0);
+    hud.textContent='MODE: '+(isPhys?'PHYSICAL':'VIRTUAL')+' · SEQ: '+stage;
+    renderer.render(scene,camera);
+  }
+  requestAnimationFrame(anim);
+  window.addEventListener('resize',()=>{
+    W=hero.clientWidth;H=hero.clientHeight;
+    plant.position.x=innerWidth<920?0:1.2;
+    camera.aspect=W/H;camera.updateProjectionMatrix();renderer.setSize(W,H);
+  });
+})();
+
+// ===== REVEAL + METRICS =====
+(function(){
+  const io=new IntersectionObserver(es=>{
+    es.forEach(e=>{
+      if(e.isIntersecting){
+        e.target.classList.add('is-visible');
+        e.target.querySelectorAll('.metric[data-count]').forEach(m=>{
+          if(m.dataset.done)return;m.dataset.done=1;
+          const b=m.querySelector('b'),target=+m.dataset.count;let v=0;
+          const iv=setInterval(()=>{v++;b.textContent='−'+v+'%';if(v>=target)clearInterval(iv);},40);
+        });
+      }
+    });
+  },{threshold:.12});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+})();
+</script>
+<script>
+// ===== TWIN SIM (About) =====
+(function(){
+  const NS='http://www.w3.org/2000/svg';
+  function S(parent,tag,attrs){const el=document.createElementNS(NS,tag);for(const k in attrs)el.setAttribute(k,attrs[k]);parent.appendChild(el);return el;}
+  function buildLine(gid,ox,virt){
+    const g=document.getElementById(gid);
+    const st=virt?{fill:'none',stroke:'#5ee6d0','stroke-width':1.2}:{fill:'#39434f'};
+    const acc=virt?{fill:'none',stroke:'#5ee6d0','stroke-width':1.4}:{fill:'#f2a63a'};
+    for(let i=0;i<4;i++){
+      S(g,'rect',Object.assign({x:ox+i*95,y:190,width:88,height:12},st,virt?{}:{fill:'#2a3340'}));
+    }
+    ['A','B','C','D'].forEach((n,i)=>{
+      S(g,'text',{x:ox+18+i*105,y:222,fill:'#8b95a1','font-family':'JetBrains Mono, monospace','font-size':9,'text-anchor':'middle'}).textContent=n;
+    });
+    S(g,'rect',Object.assign({x:ox+104,y:140,width:8,height:50},st,virt?{}:{fill:'#39434f'}));
+    S(g,'rect',Object.assign({x:ox+134,y:140,width:8,height:50},st,virt?{}:{fill:'#39434f'}));
+    const beam=S(g,'line',{x1:ox+112,y1:178,x2:ox+134,y2:178,stroke:'#e24b4a','stroke-width':1.5,opacity:.25});
+    S(g,'rect',Object.assign({x:ox+206,y:96,width:8,height:94},st,virt?{}:{fill:'#39434f'}));
+    S(g,'rect',Object.assign({x:ox+206,y:96,width:44,height:8},st,virt?{}:{fill:'#39434f'}));
+    const drill=document.createElementNS(NS,'g');g.appendChild(drill);
+    S(drill,'rect',Object.assign({x:ox+218,y:106,width:10,height:26},acc));
+    S(drill,'path',{d:'M'+(ox+218)+' 132 L'+(ox+228)+' 132 L'+(ox+223)+' 144 Z',fill:virt?'none':'#f2a63a',stroke:virt?'#5ee6d0':'none','stroke-width':1.2});
+    const prod=document.createElementNS(NS,'g');g.appendChild(prod);
+    S(prod,'rect',Object.assign({x:ox+8,y:168,width:24,height:20},acc));
+    const mark=S(prod,'circle',{cx:ox+20,cy:178,r:2.5,fill:virt?'#5ee6d0':'#0d1117',opacity:0});
+    return {beam,drill,prod,mark};
+  }
+  const P=buildLine('phys-scene',30,false);
+  const V=buildLine('virt-scene',560,true);
+  const D=id=>document.getElementById(id);
+
+  const st={
+    mode:'auto', running:true, fast:false,
+    px:0, py:0, opac:1,
+    phase:'move', t:0, scanned:false, drilled:false, willReject:false,
+    drillOff:0, drillPhase:'idle', drillT:0,
+    ok:0, rej:0, vel:0
+  };
+  let fwdHeld=false, backHeld=false;
+  const POS_B=100, POS_C=205, POS_END=340, PX_MAX=348;
+  const speed=()=>0.85*(st.fast?2.1:1);
+
+  function render(){
+    [P,V].forEach(s=>{
+      s.prod.setAttribute('transform','translate('+st.px+','+st.py+')');
+      s.prod.setAttribute('opacity',st.opac);
+      s.drill.setAttribute('transform','translate(0,'+st.drillOff+')');
+      s.mark.setAttribute('opacity',st.drilled?1:0);
+    });
+  }
+  function setConv(active){
+    for(let i=1;i<=4;i++){
+      const el=D('d-c'+i);
+      if(!st.running){el.textContent='OFF';el.className='v off';}
+      else if(i===active){el.textContent='RUN';el.className='v on';}
+      else{el.textContent='IDLE';el.className='v';}
+    }
+  }
+  const convOf=x=>x<POS_B?1:x<POS_C?2:x<POS_END?3:4;
+  function respawn(){
+    st.px=0;st.py=0;st.opac=1;st.phase='move';st.scanned=false;st.drilled=false;
+  }
+  function stepDrill(){
+    switch(st.drillPhase){
+      case 'down':
+        st.drillOff+=1.5*(st.fast?1.6:1);
+        if(st.drillOff>=26){st.drillOff=26;st.drillPhase='hold';st.drillT=0;}
+        break;
+      case 'hold':
+        st.drillT+=1/60;
+        if(st.drillT>(st.fast?.45:.9))st.drillPhase='up';
+        break;
+      case 'up':
+        st.drillOff-=1.5*(st.fast?1.6:1);
+        if(st.drillOff<=0){
+          st.drillOff=0;st.drillPhase='idle';
+          D('d-drill').textContent='IDLE';D('d-drill').className='v';
+          // did we drill the part?
+          if(st.px>=POS_C-14&&st.px<=POS_C+14&&st.opac>0){st.drilled=true;}
+          if(st.mode==='auto'){st.phase='move';}
+        }
+        break;
+    }
+  }
+  function startDrill(){
+    if(st.drillPhase!=='idle')return;
+    st.drillPhase='down';
+    D('d-drill').textContent='ACTIVE';D('d-drill').className='v warn';
+  }
+
+  function frame(){
+    requestAnimationFrame(frame);
+    if(!st.running){render();return;}
+    if(st.drillPhase!=='idle')stepDrill();
+
+    if(st.mode==='manual'){
+      st.vel=(fwdHeld?1:0)+(backHeld?-1:0);
+      if(st.drillPhase!=='idle')st.vel=0;
+      st.px=Math.max(0,Math.min(PX_MAX,st.px+st.vel*speed()));
+      st.py=0;st.opac=1;
+      setConv(st.vel!==0?convOf(st.px):0);
+      if(st.vel!==0){D('d-insp').textContent='—';D('d-insp').className='v';}
+      render();return;
+    }
+
+    // AUTO
+    switch(st.phase){
+      case 'move':
+        st.px+=speed();
+        setConv(convOf(st.px));
+        if(st.px>=POS_B&&!st.scanned){st.scanned=true;st.phase='scan';st.t=0;st.willReject=Math.random()<.28;st.px=POS_B;}
+        else if(st.px>=POS_C&&!st.drilled){st.px=POS_C;st.phase='drill';startDrill();}
+        else if(st.px>=POS_END){st.phase='exit';st.t=0;}
+        break;
+      case 'scan':
+        st.t+=1/60;
+        [P,V].forEach(s=>s.beam.setAttribute('opacity',Math.sin(st.t*30)>0?1:.15));
+        D('d-insp').textContent='SCANNING';D('d-insp').className='v warn';
+        if(st.t>(st.fast?.4:.8)){
+          [P,V].forEach(s=>s.beam.setAttribute('opacity',.25));
+          if(st.willReject){
+            st.phase='reject';st.t=0;
+            D('d-insp').textContent='REJECT';D('d-insp').className='v err';
+            st.rej++;D('d-rej').textContent=st.rej;
+          } else {
+            st.phase='move';
+            D('d-insp').textContent='PASS';D('d-insp').className='v on';
+          }
+        }
+        break;
+      case 'reject':
+        st.t+=1/60;
+        st.py=st.t*74;st.opac=Math.max(0,1-st.t*1.15);
+        if(st.t>.95)respawn();
+        break;
+      case 'drill':
+        if(st.drillPhase==='idle'&&st.drilled)st.phase='move';
+        break;
+      case 'exit':
+        st.t+=1/60;
+        st.px+=speed();st.opac=Math.max(0,1-st.t*1.7);
+        if(st.opac<=0){st.ok++;D('d-ok').textContent=st.ok;respawn();}
+        break;
+    }
+    render();
+  }
+  requestAnimationFrame(frame);
+
+  setInterval(()=>{
+    if(!st.running)return;
+    D('d-energy').textContent=((st.fast?5.1:3.8)+Math.random()*.9).toFixed(2)+' kW';
+    D('d-tp').textContent=((st.fast?58:34)+Math.floor(Math.random()*5))+'/h';
+    D('d-cycle').textContent=((st.fast?4.6:8)+Math.random()*.9).toFixed(1)+' s';
+    D('d-lat').textContent=9+Math.floor(Math.random()*8);
+  },1200);
+
+  function syncPulse(fromPhys,cb){
+    const dot=D(fromPhys?'sync-dot-b':'sync-dot-a');
+    const x0=fromPhys?440:560,x1=fromPhys?560:440;
+    dot.setAttribute('cy',150);let p=0;
+    const iv=setInterval(()=>{
+      p+=.06;dot.setAttribute('opacity',p<1?1:0);
+      dot.setAttribute('cx',x0+(x1-x0)*Math.min(p,1));
+      if(p>=1){clearInterval(iv);dot.setAttribute('opacity',0);cb&&cb();}
+    },16);
+  }
+
+  function setMode(m){
+    st.mode=m;
+    const auto=m==='auto';
+    D('twin-auto-btn').classList.toggle('hmi-btn--active',auto);
+    D('twin-man-btn').classList.toggle('hmi-btn--active',!auto);
+    ['twin-fwd','twin-back','twin-drill'].forEach(id=>D(id).disabled=auto);
+    D('lamp-auto').className='lamp'+(auto?' lamp--amber':'');
+    D('d-mode').textContent=auto?'AUTO':'MANUAL';
+    D('d-mode').className='v '+(auto?'warn':'on');
+    if(auto){
+      // resume clean auto cycle from wherever the part is
+      st.py=0;st.opac=1;
+      st.scanned=st.px>=POS_B;st.phase='move';
+    }
+  }
+  D('twin-auto-btn').addEventListener('click',()=>{setMode('auto');toast('LINE 01','Mode: AUTO — cycle resumes.');});
+  D('twin-man-btn').addEventListener('click',()=>{setMode('manual');toast('LINE 01','Mode: MANUAL — jog with FWD/BWD, fire DRILL yourself.');});
+
+  D('twin-stop').addEventListener('click',()=>{
+    if(!st.running)return;
+    D('d-state').textContent='STOPPING';D('d-state').className='v warn';
+    syncPulse(true,()=>{
+      st.running=false;setConv(0);
+      D('d-state').textContent='STOPPED';D('d-state').className='v err';
+      D('lamp-run').className='lamp';D('lamp-fault').className='lamp lamp--red';
+    });
+  });
+  D('twin-start').addEventListener('click',()=>{
+    if(st.running)return;
+    D('d-state').textContent='STARTING';D('d-state').className='v warn';
+    syncPulse(false,()=>{
+      st.running=true;
+      D('d-state').textContent='RUNNING';D('d-state').className='v on';
+      D('lamp-run').className='lamp lamp--on';D('lamp-fault').className='lamp';
+    });
+  });
+  D('twin-reset').addEventListener('click',()=>{
+    st.ok=0;st.rej=0;D('d-ok').textContent='0';D('d-rej').textContent='0';respawn();render();
+    toast('LINE 01','Counters reset. Part back at A.');
+  });
+  D('twin-fast').addEventListener('click',()=>{
+    st.fast=!st.fast;
+    D('twin-fast').classList.toggle('hmi-btn--active',st.fast);
+    toast('LINE 01','Speed: '+(st.fast?'FAST (×2.1)':'NOMINAL'));
+  });
+  D('twin-drill').addEventListener('click',()=>{
+    if(st.mode!=='manual')return;
+    if(!st.running){toast('LINE 01','Line stopped — press START first.');return;}
+    startDrill();
+  });
+  function hold(id,set){
+    const el=D(id);
+    const on=e=>{e.preventDefault&&e.preventDefault();set(true);};
+    const off=()=>set(false);
+    el.addEventListener('pointerdown',on);
+    window.addEventListener('pointerup',off);
+    el.addEventListener('pointerleave',off);
+    el.addEventListener('touchstart',on,{passive:false});
+    el.addEventListener('touchend',off);
+  }
+  hold('twin-fwd',v=>fwdHeld=v);
+  hold('twin-back',v=>backHeld=v);
+  setMode('auto');
+})();
+
+// ===== VIZ 1: COMPONENT TEST SUITE =====
+let v1busy=false;
+function runViz1(){
+  if(v1busy)return;v1busy=true;
+  const $=id=>document.getElementById(id);
+  const sts=[0,1,2,3,4].map(i=>$('v1-st-'+i));
+  sts.forEach(s=>{s.textContent='—';s.setAttribute('fill','#5f6b78');});
+  $('v1-result').setAttribute('opacity',0);
+  $('v1-cyl-sensor').setAttribute('fill','#39434f');
+  $('v1-part').setAttribute('opacity',0);
+  $('viz1-status').textContent='POPULATING TEST CASES FROM CONTROL DATA...';
+  v1Anim.partX=0;v1Anim.belt=false;v1Anim.spin=false;v1Anim.cylTo=0;v1Anim.doorTo=0;v1Anim.robot=0;
+  $('v1-tc-mode').textContent='· ABSTRACT';
+  $('tc-line1').textContent='test({COMPONENT}) → actuate → expect {ACK}';
+  $('tc-line1').setAttribute('fill','#8b95a1');
+  const steps=[];let T=0;
+  function at(dt,fn){T+=dt;steps.push([T,fn]);}
+  function setSt(i,txt,color){sts[i].textContent=txt;sts[i].setAttribute('fill',color);}
+  function plc(msg){$('v1-plcline').textContent='PLC: '+msg;}
+  // populate
+  at(900,()=>{
+    $('v1-tc-mode').textContent='· POPULATED · STATION 20';
+    $('tc-line1').textContent='test(M01,C01,+K20,D01,R01) → per-component';
+    $('tc-line1').setAttribute('fill','#eef1f4');
+    $('viz1-status').textContent='EXECUTING · 5 COMPONENT TESTS';
+  });
+  // DRIVE test
+  at(500,()=>{setSt(0,'RUN','#5ee6d0');plc('Q4.0=TRUE (drive on)');v1Anim.spin=true;});
+  at(1400,()=>{setSt(0,'PASS','#3ddc84');v1Anim.spin=false;plc('I4.1=TRUE speed ack ✓');});
+  // CONVEYOR
+  at(400,()=>{setSt(1,'RUN','#5ee6d0');v1Anim.belt=true;$('v1-part').setAttribute('opacity',1);});
+  at(1600,()=>{setSt(1,'PASS','#3ddc84');v1Anim.belt=false;plc('part tracked A→B ✓');});
+  // CYLINDER — fails, then retests
+  at(400,()=>{setSt(2,'RUN','#5ee6d0');v1Anim.cylTo=34;plc('Q12.0=TRUE extend');});
+  at(1100,()=>{setSt(2,'FAIL','#e24b4a');plc('I12.3 TIMEOUT ✗ (no ack)');$('viz1-status').textContent='CYL +K20 FAILED · AUTOMATIC RETEST';});
+  at(900,()=>{v1Anim.cylTo=0;});
+  at(700,()=>{setSt(2,'RETRY','#f2a63a');v1Anim.cylTo=34;plc('Q12.0=TRUE extend (retest)');});
+  at(1100,()=>{$('v1-cyl-sensor').setAttribute('fill','#3ddc84');setSt(2,'PASS','#3ddc84');plc('I12.3=TRUE ack ✓');$('viz1-status').textContent='EXECUTING · 5 COMPONENT TESTS';});
+  // DOOR
+  at(400,()=>{setSt(3,'RUN','#5ee6d0');v1Anim.doorTo=52;plc('Q7.2=TRUE close door');});
+  at(1000,()=>{v1Anim.doorTo=0;plc('I7.4=TRUE closed ack ✓');});
+  at(800,()=>{setSt(3,'PASS','#3ddc84');});
+  // ROBOT
+  at(400,()=>{setSt(4,'RUN','#5ee6d0');v1Anim.robot=1;plc('R01 → test pose');});
+  at(1800,()=>{setSt(4,'PASS','#3ddc84');v1Anim.robot=0;plc('R01 pose reached ✓');});
+  at(500,()=>{
+    $('v1-result').setAttribute('opacity',1);
+    $('viz1-status').textContent='SUITE COMPLETE · 5/5 PASS · 1 RETEST';
+    v1busy=false;
+  });
+  steps.forEach(([t,fn])=>setTimeout(fn,t));
+}
+// viz1 continuous animator
+const v1Anim={spin:false,belt:false,cylTo:0,cylNow:0,doorTo:0,doorNow:0,robot:0,rt:0,beltOff:0,ang:0,partX:0};
+(function(){
+  const $=id=>document.getElementById(id);
+  function f(){
+    requestAnimationFrame(f);
+    const spin=$('v1-spin');if(!spin)return;
+    if(v1Anim.spin){v1Anim.ang+=4;spin.setAttribute('transform','rotate('+v1Anim.ang+' 64 270)');}
+    if(v1Anim.belt){v1Anim.beltOff-=1.5;$('v1-belt').setAttribute('stroke-dashoffset',v1Anim.beltOff);v1Anim.partX=Math.min(v1Anim.partX+1.5,270);}
+    else if(v1Anim.partX>0&&!v1Anim.belt){}
+    $('v1-part').setAttribute('transform','translate('+v1Anim.partX+',0)');
+    v1Anim.cylNow+=(v1Anim.cylTo-v1Anim.cylNow)*.08;
+    $('v1-cyl').setAttribute('transform','translate('+v1Anim.cylNow+',0)');
+    v1Anim.doorNow+=(v1Anim.doorTo-v1Anim.doorNow)*.08;
+    $('v1-door').setAttribute('transform','translate(0,'+v1Anim.doorNow+')');
+    v1Anim.rt+=(v1Anim.robot-v1Anim.rt)*.04;
+    $('v1-arm1').setAttribute('transform','rotate('+(v1Anim.rt*-38)+' 387 232)');
+    $('v1-arm2').setAttribute('transform','rotate('+(v1Anim.rt*55)+' 387 184)');
+  }
+  f();
+})();
+</script>
+<script>
+// ===== VIZ 2: CELL COLLISION =====
+function typeText(el,text,speed,cb){
+  el.textContent='';let i=0;
+  const iv=setInterval(()=>{el.textContent=text.slice(0,++i);if(i>=text.length){clearInterval(iv);cb&&cb();}},speed);
+}
+const v2Anim={ir2:0,beltOff:0,liftY:0,liftDir:-1};
+(function(){
+  const $=id=>document.getElementById(id);
+  function f(){
+    requestAnimationFrame(f);
+    if(!$('v2-ir2arm'))return;
+    v2Anim.ir2+=.012;
+    $('v2-ir2arm').setAttribute('transform','rotate('+(Math.sin(v2Anim.ir2)*50)+' 470 180)');
+    v2Anim.beltOff-=.8;
+    $('v2-beltH').setAttribute('stroke-dashoffset',v2Anim.beltOff);
+    $('v2-beltV').setAttribute('stroke-dashoffset',v2Anim.beltOff);
+    v2Anim.liftY+=v2Anim.liftDir*.35;
+    if(v2Anim.liftY<-78||v2Anim.liftY>0)v2Anim.liftDir*=-1;
+    $('v2-lift').setAttribute('transform','translate(0,'+v2Anim.liftY+')');
+  }
+  f();
+})();
+let v2busy=false;
+function runViz2(interlock){
+  if(v2busy)return;v2busy=true;
+  const $=id=>document.getElementById(id);
+  const status=$('viz2-status');
+  $('v2-chips').setAttribute('opacity',0);
+  $('v2-result').setAttribute('opacity',0);
+  $('v2-flash').setAttribute('opacity',0);
+  $('v2-hitbox').setAttribute('opacity',0);
+  $('v2-interlock').setAttribute('opacity',interlock?1:0);
+  $('v2-il-label').setAttribute('opacity',interlock?1:0);
+  let bridgeX=520,ir1=0,trolleyY=200;
+  function place(){
+    $('v2-bridge').setAttribute('x',bridgeX);
+    $('v2-trolley').setAttribute('x',bridgeX-7);
+    $('v2-trolley').setAttribute('y',trolleyY);
+    $('v2-glabel').setAttribute('x',bridgeX+25);
+    $('v2-ir1arm').setAttribute('transform','rotate('+ir1+' 330 240)');
+  }
+  place();
+  status.textContent='PARSING PROMPT...';
+  const q='Is there a collision between gantry G02 and robot IR1 in part-picking position?'+(interlock?' (interlock active)':'');
+  typeText($('v2-query'),q,16,()=>{
+    status.textContent='AI RESOLVING ENTITIES + BUILDING SEQUENCE VIA MCP...';
+    setTimeout(()=>{
+      $('v2-chips').setAttribute('opacity',1);
+      status.textContent='EXECUTING IN VIRTUAL CELL...';
+      let phase=0,held=0;
+      const iv=setInterval(()=>{
+        // IR1 rotates toward pick pos (arm already points up; sweep slight)
+        if(ir1>-20)ir1-=.4;
+        // gantry approaches robot zone
+        const targetX=336;
+        if(interlock&&bridgeX>400&&phase===0){
+          bridgeX-=2.2;
+          if(bridgeX<=400){bridgeX=400;phase=1;status.textContent='G02 HOLD · INTERLOCK ZONE · WAITING FOR IR1 CLEAR';}
+        } else if(interlock&&phase===1){
+          held++;
+          if(held===40){ir1=25;} // arm swings clear
+          if(held>70){phase=2;status.textContent='ZONE CLEAR · G02 PROCEEDING';}
+        } else {
+          bridgeX-=2.2;
+          if(interlock)trolleyY+= (160-trolleyY)*.05;
+          else trolleyY+=(168-trolleyY)*.05;
+        }
+        place();
+        if(!interlock&&bridgeX<=targetX){
+          clearInterval(iv);
+          $('v2-flash').setAttribute('opacity',.16);
+          setTimeout(()=>$('v2-flash').setAttribute('opacity',0),150);
+          setTimeout(()=>$('v2-flash').setAttribute('opacity',.12),290);
+          setTimeout(()=>$('v2-flash').setAttribute('opacity',0),440);
+          $('v2-hitbox').setAttribute('opacity',1);
+          $('v2-result').setAttribute('fill','#e24b4a');
+          $('v2-result').textContent='⚠ COLLISION: G02 TROLLEY ∩ IR1 GRIPPER @ PICK POS · VIDEO ATTACHED';
+          $('v2-result').setAttribute('opacity',1);
+          status.textContent='RESULT: COLLISION · REVIEW VIDEO';
+          v2busy=false;reset();
+        }
+        if(interlock&&bridgeX<=targetX&&phase===2){
+          clearInterval(iv);
+          $('v2-result').setAttribute('fill','#3ddc84');
+          $('v2-result').textContent='✓ NO COLLISION · INTERLOCK SEQUENCED G02 AFTER IR1 CLEARED';
+          $('v2-result').setAttribute('opacity',1);
+          status.textContent='RESULT: SAFE · INTERLOCK VERIFIED · VIDEO ATTACHED';
+          v2busy=false;reset();
+        }
+      },24);
+      function reset(){
+        setTimeout(()=>{bridgeX=520;trolleyY=200;ir1=0;place();},2600);
+      }
+    },700);
+  });
+}
+
+// ===== VIZ 4: RULES ===== (unchanged mechanics)
+let v4busy=false;
+function runViz4(){
+  if(v4busy)return;v4busy=true;
+  const $=id=>document.getElementById(id);
+  const status=$('viz4-status');
+  const checks=[...document.querySelectorAll('#v4-checks text')];
+  checks.forEach(c=>c.setAttribute('opacity',0));
+  const codeLines=[...document.querySelectorAll('#v4-code text')];
+  codeLines.forEach(l=>l.setAttribute('fill','#5f6b78'));
+  $('v4-total').textContent='0';$('v4-pass').textContent='0';$('v4-fail').textContent='0';
+  const scan=$('v4-scan');scan.setAttribute('opacity',1);
+  status.textContent='SCANNING CONTROL CODE...';
+  let li=0;
+  const iv=setInterval(()=>{
+    if(li>0)codeLines[li-1].setAttribute('fill','#8b95a1');
+    if(li<codeLines.length){
+      const y=66+li*18;
+      scan.setAttribute('y1',y-4);scan.setAttribute('y2',y-4);
+      codeLines[li].setAttribute('fill','#eef1f4');li++;
+    } else {
+      clearInterval(iv);scan.setAttribute('opacity',0);
+      let ci=0,pass=0,fail=0;
+      const iv2=setInterval(()=>{
+        if(ci<checks.length){
+          const c=checks[ci];c.setAttribute('opacity',1);
+          const ok=c.dataset.ok==='1';
+          c.setAttribute('fill',ok?'#3ddc84':'#e24b4a');
+          ok?pass++:fail++;
+          $('v4-total').textContent=ci+1;$('v4-pass').textContent=pass;$('v4-fail').textContent=fail;
+          if(!ok)codeLines[ci===2?3:4].setAttribute('fill','#e24b4a');
+          ci++;
+        } else {
+          clearInterval(iv2);
+          status.textContent='REPORT: 2 VIOLATIONS (R-03 NESTING, R-04 HARDCODED I/O)';
+          v4busy=false;
+        }
+      },420);
+    }
+  },260);
+}
+
+// ===== VIZ 5: KNOWLEDGE ROUTING =====
+let v5busy=false;
+function runViz5(){
+  if(v5busy)return;v5busy=true;
+  const $=id=>document.getElementById(id);
+  const status=$('viz5-status');
+  ['v5-s1','v5-s2','v5-s3'].forEach(i=>$(i).setAttribute('opacity',0));
+  ['v5-n1','v5-n2','v5-n3'].forEach(i=>$(i).setAttribute('stroke','#39434f'));
+  ['v5-a1','v5-a2','v5-a3','v5-a4'].forEach(i=>$(i).textContent='');
+  const pkt=$('v5-pkt');
+  function travel(pathId,dur,cb){
+    const path=$(pathId),len=path.getTotalLength();
+    let p=0;pkt.setAttribute('opacity',1);
+    path.setAttribute('stroke','#5ee6d0');
+    const iv=setInterval(()=>{
+      p+=16/dur;
+      const pt=path.getPointAtLength(Math.min(p,1)*len);
+      pkt.setAttribute('cx',pt.x);pkt.setAttribute('cy',pt.y);
+      if(p>=1){clearInterval(iv);pkt.setAttribute('opacity',0);path.setAttribute('stroke','#39434f');cb&&cb();}
+    },16);
+  }
+  status.textContent='EMBEDDING QUERY...';
+  typeText($('v5-query'),'How has cylinder +K20 changed over the last 6 months?',18,()=>{
+    status.textContent='ROUTING VIA SKILL.MD...';
+    travel('v5-p0',500,()=>{
+      status.textContent='CONSULTING EPLAN DATA...';
+      travel('v5-p1',600,()=>{
+        $('v5-n1').setAttribute('stroke','#5ee6d0');$('v5-s1').setAttribute('opacity',1);
+        status.textContent='CONSULTING CONTROL CODE...';
+        travel('v5-p2',600,()=>{
+          $('v5-n2').setAttribute('stroke','#5ee6d0');$('v5-s2').setAttribute('opacity',1);
+          status.textContent='CONSULTING TEST PLAN...';
+          travel('v5-p3',600,()=>{
+            $('v5-n3').setAttribute('stroke','#5ee6d0');$('v5-s3').setAttribute('opacity',1);
+            status.textContent='LOCAL LLM SYNTHESIZING...';
+            travel('v5-p4',700,()=>{
+              typeText($('v5-a1'),'+K20 (station 20) · change history, 6 months:',12,()=>{
+                typeText($('v5-a2'),'03/2026 EPLAN r.418: 2-ch sensor → 4-ch, reclassified SAFETY (PL d)',10,()=>{
+                  typeText($('v5-a3'),'04/2026 control v2.3: FB_Cylinder updated, new ack I12.5',10,()=>{
+                    typeText($('v5-a4'),'sources: EPLAN r.418 · control data v2.3 · test plan S20 (3 cases, PASS)',10,()=>{
+                      status.textContent='ANSWER GROUNDED · 3 SOURCES CITED';
+                      v5busy=false;
+                    });
+                  });
+                });
+              });
+            });
+          });
+        });
+      });
+    });
+  });
+}
+
+// ===== VIZ 6: COMPARISON =====
+(function seedChunks(){
+  const NS='http://www.w3.org/2000/svg';
+  const m=document.getElementById('v6-master'),s=document.getElementById('v6-sister');
+  for(let i=0;i<9;i++){
+    const y=44+i*30;
+    [[m,30],[s,290]].forEach(([g,x])=>{
+      const r=document.createElementNS(NS,'rect');
+      r.setAttribute('x',x);r.setAttribute('y',y);r.setAttribute('width',200);r.setAttribute('height',22);
+      r.setAttribute('fill','#141a21');r.setAttribute('stroke','#39434f');
+      g.appendChild(r);
+      const t=document.createElementNS(NS,'text');
+      t.setAttribute('x',x+10);t.setAttribute('y',y+15);t.setAttribute('fill','#5f6b78');
+      t.setAttribute('font-family','JetBrains Mono, monospace');t.setAttribute('font-size','9');
+      t.textContent='FB_'+['Conveyor','Cylinder','Drive','Safety','Gripper','Turntable','Lift','Sensorik','Interlock'][i]+' · NW '+(i+1);
+      g.appendChild(t);
+    });
+  }
+})();
+let v6busy=false;
+function runViz6(){
+  if(v6busy)return;v6busy=true;
+  const $=id=>document.getElementById(id);
+  const status=$('viz6-status');
+  const mRects=[...document.querySelectorAll('#v6-master rect')];
+  const sRects=[...document.querySelectorAll('#v6-sister rect')];
+  mRects.forEach(r=>r.setAttribute('stroke','#39434f'));
+  sRects.forEach(r=>r.setAttribute('stroke','#39434f'));
+  ['v6-bar-h','v6-bar-m','v6-bar-l'].forEach(i=>$(i).setAttribute('width',0));
+  $('v6-n-h').textContent='0 changes';$('v6-n-m').textContent='0 changes';$('v6-n-l').textContent='0 changes';
+  $('v6-result').setAttribute('opacity',0);
+  const scan=$('v6-scan');scan.setAttribute('opacity',1);
+  status.textContent='DETERMINISTIC DIFF: FB BY FB, NW BY NW...';
+  const diffs=[1,3,6,7];let i=0;
+  const iv=setInterval(()=>{
+    if(i<9){
+      const y=44+i*30+11;
+      scan.setAttribute('y1',y);scan.setAttribute('y2',y);
+      if(diffs.includes(i)){mRects[i].setAttribute('stroke','#f2a63a');sRects[i].setAttribute('stroke','#f2a63a');}
+      i++;
+    } else {
+      clearInterval(iv);scan.setAttribute('opacity',0);
+      status.textContent='LLM CATEGORIZING '+diffs.length+' DIFFS...';
+      setTimeout(()=>{
+        const anim=(id,nid,w,n)=>{
+          let cw=0;const v=setInterval(()=>{cw+=4;$(id).setAttribute('width',Math.min(cw,w));if(cw>=w){clearInterval(v);$(nid).textContent=n+' change'+(n>1?'s':'');}},30);
+        };
+        anim('v6-bar-h','v6-n-h',45,1);
+        setTimeout(()=>anim('v6-bar-m','v6-n-m',60,1),300);
+        setTimeout(()=>anim('v6-bar-l','v6-n-l',90,2),600);
+        setTimeout(()=>{
+          $('v6-result').setAttribute('opacity',1);
+          status.textContent='REPORT READY: 1 HIGH / 1 MEDIUM / 2 LOW';
+          v6busy=false;
+        },1400);
+      },800);
+    }
+  },240);
+}
+
+// ===== AUTO-RUN =====
+(function(){
+  const map={'a-test':runViz1,'a-collision':()=>runViz2(false),'a-know':runViz5,'a-comp':runViz6,'a-rules':runViz4};
+  const done={};
+  const io=new IntersectionObserver(es=>{
+    es.forEach(e=>{
+      if(e.isIntersecting&&!done[e.target.id]){done[e.target.id]=1;setTimeout(()=>map[e.target.id](),500);}
+    });
+  },{threshold:.4});
+  Object.keys(map).forEach(id=>{const el=document.getElementById(id);if(el)io.observe(el);});
+})();
+
+// ===== EASTER EGGS =====
+// 1. Konami → Engineering Mode
+(function(){
+  const seq=['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
+  let idx=0;
+  window.addEventListener('keydown',e=>{
+    if(e.key===seq[idx]){idx++;if(idx===seq.length){idx=0;
+      document.body.classList.toggle('eng-mode');Eggs.mark('konami');
+      toast('ENGINEERING MODE '+(document.body.classList.contains('eng-mode')?'ON':'OFF'),'All element boundaries exposed. Now you see the networks behind the HMI. (Konami again to toggle.)');
+    }} else idx=(e.key===seq[0])?1:0;
+  });
+})();
+// 2. PLC status ×5 → raw stack
+(function(){
+  let n=0,t0=0;
+  document.getElementById('plc-status').addEventListener('click',()=>{
+    const now=Date.now();if(now-t0>4000)n=0;t0=now;n++;
+    if(n>=5){n=0;Eggs.mark('stack');document.getElementById('stack-modal').classList.add('on');}
+  });
+})();
+// 3. fake alarm after 45s
+setTimeout(()=>{
+  Eggs.mark('alarm');
+  toast('⚠ ALARM A-041','MANUAL TESTING OVERLOAD DETECTED. Recommended remedy?',{alarm:true,sticky:true,actions:[
+    ['ACKNOWLEDGE',()=>toast('A-041','Acknowledged. The overload persists. There is another way…')],
+    ['AUTOMATE IT',()=>toast('A-041 · RESOLVED','Correct answer. This is exactly why the test suite exists.')]
+  ]});
+},45000);
+// 4. generate test case
+const tcSubjects=['coffee_machine','office_door','elevator_02','vending_unit','meeting_room_light','engineer.motivation','deadline_buffer'];
+const tcActs=['extend','actuate','cycle','calibrate','interlock','ping'];
+const tcExpects=['ACK within 200ms','no collision with reality','state == CAFFEINATED','TRUE, eventually','all sensors green','zero manual steps'];
+function genTestCase(){
+  Eggs.mark('gen');
+  const r=a=>a[Math.floor(Math.random()*a.length)];
+  toast('TC-'+(1000+Math.floor(Math.random()*9000)),r(tcActs)+'('+r(tcSubjects)+') → expect '+r(tcExpects));
+  return false;
+}
+// 5. sudo
+(function(){
+  let buf='';
+  window.addEventListener('keydown',e=>{
+    if(e.key.length===1){buf=(buf+e.key.toLowerCase()).slice(-4);
+      if(buf==='sudo'){Eggs.mark('sudo');toast('PERMISSION DENIED','Nice try. Root access requires German B2.');buf='';}
+    }
+  });
+})();
+// 6. hanami — build tag click
+(function(){
+  document.getElementById('build-tag').addEventListener('click',()=>{
+    Eggs.mark('hanami');
+    toast('HANAMI MODE','This portfolio\u2019s first draft was a cherry-blossom garden. It remembers.');
+    for(let i=0;i<36;i++){
+      const p=document.createElement('div');p.className='sakura';
+      const s=6+Math.random()*8;
+      p.style.width=s+'px';p.style.height=s*.8+'px';p.style.left=Math.random()*100+'vw';
+      document.body.appendChild(p);
+      const dur=5000+Math.random()*4000;
+      p.animate([
+        {transform:'translate(0,-4vh) rotate(0deg)',opacity:.9},
+        {transform:'translate('+(Math.random()*80-40)+'px,105vh) rotate('+(Math.random()>.5?360:-360)+'deg)',opacity:.7}
+      ],{duration:dur,easing:'linear'}).onfinish=()=>p.remove();
+    }
+  });
+})();
+</script>
+<script>
+// ===== 3D GLOBE =====
+(function(){
+  const holder=document.getElementById('globe-holder');
+  const canvas=document.getElementById('globe-canvas');
+  if(!holder||!canvas||typeof THREE==='undefined')return;
+  // World dot-matrix map generator. Equirectangular, lon -180..180, lat 85..-60.
+const WORLD_POLYS = [
+  // North America
+  [[-168,66],[-160,71],[-140,70],[-125,73],[-110,74],[-95,74],[-85,71],[-78,68],[-70,62],[-60,58],[-55,52],[-60,47],[-66,44],[-70,42],[-74,38],[-76,35],[-79,32],[-81,29],[-80,25],[-83,29],[-88,30],[-93,29],[-97,26],[-97,21],[-94,18],[-90,15],[-86,13],[-83,9],[-79,8],[-83,10],[-87,14],[-92,16],[-97,18],[-103,21],[-108,25],[-113,29],[-117,33],[-121,37],[-124,42],[-124,48],[-128,52],[-133,56],[-138,59],[-146,61],[-152,60],[-158,57],[-164,60],[-168,66]],
+  // Greenland
+  [[-45,60],[-55,68],[-52,75],[-40,78],[-28,73],[-32,66],[-45,60]],
+  // South America
+  [[-79,8],[-72,12],[-64,10],[-56,6],[-50,2],[-44,-2],[-38,-6],[-35,-9],[-38,-15],[-41,-22],[-48,-27],[-53,-34],[-58,-38],[-62,-41],[-65,-45],[-68,-50],[-71,-54],[-73,-50],[-72,-44],[-71,-36],[-70,-28],[-70,-20],[-74,-15],[-79,-8],[-81,-3],[-80,2],[-77,7],[-79,8]],
+  // Eurasia (one loop: Iberia → Scandinavia → Siberia → SE Asia → India → Arabia → Anatolia → Med → Iberia)
+  [[-9,37],[-9,43],[-4,44],[-4,48],[0,49],[4,52],[8,54],[8,57],[6,58],[5,61],[10,64],[16,68],[24,71],[30,70],[40,67],[50,69],[60,70],[70,73],[80,74],[95,76],[105,77],[115,74],[128,72],[140,72],[150,70],[160,70],[170,67],[178,65],[173,62],[165,60],[158,55],[150,60],[142,55],[138,48],[132,44],[128,40],[122,38],[121,32],[120,26],[112,21],[106,17],[109,13],[105,9],[103,5],[100,9],[98,13],[95,17],[91,21],[87,21],[85,19],[82,15],[80,10],[77,8],[74,14],[71,20],[68,23],[64,25],[59,25],[57,22],[54,17],[50,13],[44,12],[42,16],[39,21],[36,27],[33,29],[34,33],[36,36],[33,37],[30,36],[27,37],[26,39],[29,41],[34,42],[40,41],[38,45],[33,45],[30,46],[27,42],[23,40],[20,42],[17,43],[15,40],[16,38],[14,38],[14,42],[12,45],[9,44],[6,43],[3,42],[0,39],[-2,37],[-6,36],[-9,37]],
+  // Africa
+  [[-6,35],[-10,31],[-15,26],[-17,21],[-16,15],[-13,9],[-8,5],[-1,5],[5,4],[9,4],[9,-1],[13,-6],[12,-12],[13,-18],[15,-23],[15,-29],[18,-34],[23,-35],[28,-33],[31,-29],[33,-24],[35,-19],[38,-14],[40,-9],[41,-3],[44,1],[48,5],[51,11],[45,11],[41,14],[38,18],[35,23],[33,28],[30,31],[25,32],[19,31],[12,34],[5,36],[-2,36],[-6,35]],
+  // Australia
+  [[114,-22],[114,-27],[116,-33],[122,-34],[129,-32],[133,-32],[138,-35],[143,-39],[147,-38],[150,-37],[153,-31],[153,-26],[150,-22],[146,-18],[143,-14],[141,-11],[136,-12],[131,-11],[126,-14],[121,-18],[114,-22]],
+];
+// island / extra land points [lon,lat]
+const WORLD_EXTRAS = [
+  [-3,53],[-1,52],[-4,56],[-8,53],           // UK + Ireland
+  [-19,65],                                   // Iceland
+  [140,36],[141,39],[142,43],[133,34],[131,32], // Japan
+  [127,37],                                   // Korea already in mainland approx
+  [121,14],[123,11],[125,8],                  // Philippines
+  [101,0],[104,-3],[108,-6],[112,-7],[117,-8],[120,-9],[110,0],[114,2],[117,4],[121,-2],[125,-8],[128,-3], // Indonesia/Borneo/Sulawesi
+  [141,-5],[144,-6],[147,-7],[137,-4],        // New Guinea
+  [47,-19],[46,-23],[49,-16],                 // Madagascar
+  [81,7],                                     // Sri Lanka
+  [-78,22],[-75,20],[-71,19],[-66,18],        // Caribbean
+  [173,-41],[172,-44],[176,-38],[178,-40],    // New Zealand
+  [-16,28],[24,35],[33,35],[9,40],[15,38],[25,38], // Canaries, Crete, Cyprus, Sardinia, Sicily, Aegean
+  [51,44],[57,45],                            // Caspian-ish land (Kazakh steppe fill helper)
+  [143,50],[142,47],                          // Sakhalin
+  [158,53],[160,56],[157,50],                 // Kamchatka
+];
+function pip(lon, lat, poly){
+  let inside=false;
+  for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+    const xi=poly[i][0],yi=poly[i][1],xj=poly[j][0],yj=poly[j][1];
+    if(((yi>lat)!==(yj>lat)) && (lon < (xj-xi)*(lat-yi)/(yj-yi)+xi)) inside=!inside;
+  }
+  return inside;
+}
+function worldDots(W,H,step){
+  const dots=[];
+  const cols=Math.floor(W/step), rows=Math.floor(H/step);
+  const grid=Array.from({length:rows},()=>new Array(cols).fill(false));
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      const px=(c+0.5)*step, py=(r+0.5)*step;
+      const lon=px/W*360-180, lat=85-py/H*145;
+      if(WORLD_POLYS.some(p=>pip(lon,lat,p))) grid[r][c]=true;
+    }
+  }
+  WORLD_EXTRAS.forEach(([lon,lat])=>{
+    const px=(lon+180)/360*W, py=(85-lat)/145*H;
+    const c=Math.min(cols-1,Math.max(0,Math.round(px/step-0.5)));
+    const r=Math.min(rows-1,Math.max(0,Math.round(py/step-0.5)));
+    grid[r][c]=true;
+  });
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)if(grid[r][c])dots.push([(c+0.5)*step,(r+0.5)*step]);
+  return {dots,grid,cols,rows};
+}
+
+  const R=2;
+  let W=holder.clientWidth,H=460;
+  const scene=new THREE.Scene();
+  const camera=new THREE.PerspectiveCamera(38,W/H,.1,50);
+  camera.position.set(0,0.5,5.9);camera.lookAt(0,0,0);
+  const renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true});
+  renderer.setSize(W,H);renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  const globe=new THREE.Group();scene.add(globe);
+
+  function toVec(lat,lon,r){
+    const ph=lat*Math.PI/180, la=lon*Math.PI/180;
+    return new THREE.Vector3(r*Math.cos(ph)*Math.cos(la), r*Math.sin(ph), -r*Math.cos(ph)*Math.sin(la));
+  }
+  // occluder sphere
+  globe.add(new THREE.Mesh(new THREE.SphereGeometry(R*.985,48,32),
+    new THREE.MeshBasicMaterial({color:0x10151c})));
+  // faint wire sphere
+  globe.add(new THREE.Mesh(new THREE.SphereGeometry(R*1.001,36,24),
+    new THREE.MeshBasicMaterial({color:0x5ee6d0,wireframe:true,transparent:true,opacity:.035})));
+  // continent dots
+  (function(){
+    const {dots}=worldDots(1000,430,6);
+    const pos=new Float32Array(dots.length*3);
+    dots.forEach(([x,y],i)=>{
+      const lon=x/1000*360-180, lat=85-y/430*145;
+      const v=toVec(lat,lon,R);
+      pos[i*3]=v.x;pos[i*3+1]=v.y;pos[i*3+2]=v.z;
+    });
+    const g=new THREE.BufferGeometry();
+    g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+    globe.add(new THREE.Points(g,new THREE.PointsMaterial({color:0x51667c,size:.028})));
+  })();
+  // sites
+  const SITES=[
+    {n:'SPARTANBURG · USA',lat:34.9,lon:-81.9},
+    {n:'DEBRECEN · HU',lat:47.5,lon:21.6},
+    {n:'DINGOLFING · DE ★BASE',lat:48.6,lon:12.5,base:true},
+    {n:'SHENYANG · CN',lat:41.8,lon:123.4}
+  ];
+  function labelSprite(text,color){
+    const c=document.createElement('canvas');c.width=512;c.height=64;
+    const x=c.getContext('2d');
+    x.font='26px "JetBrains Mono", monospace';x.fillStyle=color;
+    x.textAlign='center';x.textBaseline='middle';
+    x.shadowColor='rgba(13,17,23,.9)';x.shadowBlur=8;
+    x.fillText(text,256,32);
+    const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthTest:false}));
+    sp.scale.set(1.7,.21,1);return sp;
+  }
+  const markers=[];
+  const homeV=toVec(SITES[2].lat,SITES[2].lon,R);
+  SITES.forEach(s=>{
+    const col=s.base?0xf2a63a:0x5ee6d0;
+    const colS=s.base?'#f2a63a':'#8b95a1';
+    const v=toVec(s.lat,s.lon,R*1.005);
+    const dot=new THREE.Mesh(new THREE.SphereGeometry(.035,10,10),new THREE.MeshBasicMaterial({color:col}));
+    dot.position.copy(v);globe.add(dot);
+    const halo=new THREE.Mesh(new THREE.SphereGeometry(.05,10,10),new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:.4}));
+    halo.position.copy(v);globe.add(halo);
+    const lab=labelSprite(s.n,colS);
+    lab.position.copy(toVec(s.lat,s.lon,R*1.16));
+    globe.add(lab);
+    markers.push({v,dot,halo,lab});
+    if(!s.base){
+      const pts=[];
+      const a=homeV.clone().normalize(),b=v.clone().normalize();
+      const ang=a.angleTo(b);
+      for(let i=0;i<=40;i++){
+        const t=i/40;
+        const p=a.clone().lerp(b,t).normalize().multiplyScalar(R*(1+Math.sin(Math.PI*t)*(.05+.12*ang/Math.PI)));
+        pts.push(p);
+      }
+      const lg=new THREE.BufferGeometry().setFromPoints(pts);
+      const line=new THREE.Line(lg,new THREE.LineDashedMaterial({color:0x5ee6d0,transparent:true,opacity:.55,dashSize:.06,gapSize:.05}));
+      line.computeLineDistances();globe.add(line);
+    }
+  });
+  // orient Europe toward camera
+  globe.rotation.y=THREE.MathUtils.degToRad(-101.6+90);
+  globe.rotation.x=.28;
+
+  let dragging=false,px0=0,py0=0,auto=true;
+  canvas.addEventListener('pointerdown',e=>{dragging=true;px0=e.clientX;py0=e.clientY;auto=false;});
+  window.addEventListener('pointerup',()=>{dragging=false;setTimeout(()=>auto=true,4000);});
+  window.addEventListener('pointermove',e=>{
+    if(!dragging)return;
+    globe.rotation.y+=(e.clientX-px0)*.006;
+    globe.rotation.x=Math.max(-.9,Math.min(.9,globe.rotation.x+(e.clientY-py0)*.004));
+    px0=e.clientX;py0=e.clientY;
+  });
+
+  const wp=new THREE.Vector3();
+  let t=0,last=performance.now();
+  function anim(now){
+    requestAnimationFrame(anim);
+    const dt=Math.min((now-last)/1000,.05);last=now;t+=dt;
+    if(auto&&!dragging)globe.rotation.y+=dt*.12;
+    const pulse=1+Math.sin(t*3)*.5;
+    markers.forEach(m=>{
+      m.halo.scale.setScalar(pulse);
+      m.halo.material.opacity=.5-Math.sin(t*3)*.25;
+      m.dot.getWorldPosition(wp);
+      const front=wp.z>0.4;
+      m.lab.visible=front;
+      m.halo.visible=front;
+    });
+    renderer.render(scene,camera);
+  }
+  requestAnimationFrame(anim);
+  window.addEventListener('resize',()=>{
+    W=holder.clientWidth;
+    camera.aspect=W/H;camera.updateProjectionMatrix();renderer.setSize(W,H);
+  });
+})();
+</script>
+</body>
+</html>
