@@ -84,9 +84,10 @@
     padding:1.1rem 1.3rem; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); }
   .hero__tagline .hl{ color:var(--text); font-weight:500; }
   .hero-zoom{ position:absolute; right:8%; bottom:5.6rem; z-index:6; display:flex; flex-direction:column; gap:.4rem; }
-  .hero-zoom button{ width:34px; height:34px; font-family:var(--mono); font-size:1rem; color:var(--text-dim);
+  .hero-zoom button{ min-width:34px; height:34px; padding:0 .7rem; font-family:var(--mono); font-size:.6rem; letter-spacing:.12em; color:var(--text-dim);
     background:rgba(13,17,23,.82); border:1px solid var(--panel-border); backdrop-filter:blur(6px); transition:color .2s, border-color .2s; }
   .hero-zoom button:hover{ color:var(--accent); border-color:var(--accent); }
+  .hero-zoom button.is-on{ color:var(--accent); border-color:var(--accent); box-shadow:0 0 8px rgba(94,230,208,.25); }
   #globe-canvas{ width:100%; height:460px; display:block; touch-action:none; cursor:grab; }
   #globe-canvas:active{ cursor:grabbing; }
   .globe-hint{ font-family:var(--mono); font-size:.62rem; letter-spacing:.14em; color:var(--text-dim); text-align:center; margin-top:.6rem; }
@@ -221,8 +222,8 @@
 <section class="hero" id="hero">
   <canvas id="factory-canvas"></canvas>
   <div class="hud hud--tl" id="plc-status" style="pointer-events:auto;"><span class="dot"></span>SYS://FACTORY-TWIN · ONLINE · PORTFOLIO v1.1</div>
-  <div class="hud hud--bl">DRAG ROTATE · PINCH / CTRL+SCROLL / DBL-CLICK ZOOM</div>
-  <div class="hero-zoom"><button id="zoom-in" aria-label="Zoom in">+</button><button id="zoom-out" aria-label="Zoom out">−</button></div>
+  <div class="hud hud--bl">DRAG ROTATE · SCROLL / PINCH ZOOM · DBL-CLICK RESET</div>
+  <div class="hero-zoom"><button id="sound-toggle" aria-label="Toggle sound">SOUND: OFF</button></div>
   <div class="hud hud--br" id="hud-mode">MODE: VIRTUAL · MIX 0.00</div>
   <div class="hero__content">
     <p class="eyebrow"><span class="dot"></span>Munich, Germany</p>
@@ -1054,18 +1055,28 @@ document.querySelectorAll('.station__head').forEach(h=>{
   const camera=new THREE.PerspectiveCamera(40,W/H,.1,140);
   const renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true});
   renderer.setSize(W,H);renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-  scene.add(new THREE.AmbientLight(0x8b95a1,.45));
-  const key=new THREE.PointLight(0x5ee6d0,1.6,70);key.position.set(6,10,7);scene.add(key);
-  const rim=new THREE.PointLight(0xf2a63a,.8,60);rim.position.set(-9,5,-6);scene.add(rim);
-  const fill=new THREE.PointLight(0x8b95a1,.35,60);fill.position.set(0,4,-10);scene.add(fill);
+  renderer.shadowMap.enabled=true;
+  renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  scene.add(new THREE.AmbientLight(0x8b95a1,.42));
+  const key=new THREE.PointLight(0x5ee6d0,1.4,70);key.position.set(6,10,7);scene.add(key);
+  const rim=new THREE.PointLight(0xf2a63a,.7,60);rim.position.set(-9,5,-6);scene.add(rim);
+  const fill=new THREE.PointLight(0x8b95a1,.3,60);fill.position.set(0,4,-10);scene.add(fill);
+  const sun=new THREE.DirectionalLight(0xf2c98a,.85);
+  sun.position.set(10,15,8);sun.castShadow=true;
+  sun.shadow.mapSize.set(1024,1024);
+  sun.shadow.camera.left=-14;sun.shadow.camera.right=14;
+  sun.shadow.camera.top=14;sun.shadow.camera.bottom=-14;
+  sun.shadow.camera.near=2;sun.shadow.camera.far=45;
+  scene.add(sun);
 
   const wires=[],solids=[];
   const plant=new THREE.Group();scene.add(plant);
   plant.position.set(innerWidth<920?0:1.2,-1.15,0);
-  function dual(geo,color,parent){
+  function dual(geo,color,parent,met,rough){
     const g=new THREE.Group();
     const w=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:0x5ee6d0,wireframe:true,transparent:true,opacity:1}));
-    const s=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:color,metalness:.55,roughness:.42,transparent:true,opacity:0}));
+    const s=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:color,metalness:met==null?.55:met,roughness:rough==null?.45:rough,transparent:true,opacity:0}));
+    s.castShadow=true;
     wires.push(w.material);solids.push(s.material);
     g.add(w,s);(parent||plant).add(g);return g;
   }
@@ -1076,72 +1087,150 @@ document.querySelectorAll('.station__head').forEach(h=>{
   // ---- floor & grid ----
   const grid=new THREE.GridHelper(32,64,0x2b6f64,0x18242e);
   grid.material.transparent=true;plant.add(grid);
-  const floorMat=new THREE.MeshStandardMaterial({color:0x10151c,metalness:.15,roughness:.92,transparent:true,opacity:0});
+  const floorMat=new THREE.MeshStandardMaterial({color:0x11161d,metalness:.15,roughness:.9,transparent:true,opacity:0});
   const floor=new THREE.Mesh(new THREE.PlaneGeometry(34,22),floorMat);
-  floor.rotation.x=-Math.PI/2;floor.position.y=-.01;plant.add(floor);
+  floor.rotation.x=-Math.PI/2;floor.position.y=-.01;floor.receiveShadow=true;plant.add(floor);
 
-  // ---- single main conveyor (the line) ----
-  const BELT_Z=-0.6, BELT_TOP=1.01, BOXC=BELT_TOP+.21;
+  // ---- roller conveyor (the line) ----
+  const BELT_Z=-0.6, BELT_TOP=1.06, BOXC=BELT_TOP+.21;
   (function(){
     const len=11.8;
-    dual(new THREE.BoxGeometry(len,.22,1.1),0x39434f).position.set(0,.9,BELT_Z);
-    [-.52,.52].forEach(off=>{
-      dual(new THREE.BoxGeometry(len,.09,.09),0x2a3340).position.set(0,1.06,BELT_Z+off);
+    [-.5,.5].forEach(off=>{
+      dual(new THREE.BoxGeometry(len,.2,.1),0x39434f).position.set(0,.96,BELT_Z+off);
     });
+    for(let i=0;i<24;i++){
+      const x=-5.75+i*.5;
+      const r=dual(new THREE.CylinderGeometry(.055,.055,.92,10),0x5e6a78,null,.8,.3);
+      r.rotation.x=Math.PI/2;r.position.set(x,BELT_TOP-.05,BELT_Z);
+    }
     for(let i=0;i<6;i++){
       const x=-5.3+i*2.12;
-      dual(new THREE.BoxGeometry(.13,.9,.9),0x232c37).position.set(x,.45,BELT_Z);
+      const leg=dual(new THREE.BoxGeometry(.13,.9,.9),0x232c37);
+      leg.position.set(x,.45,BELT_Z);
+      dual(new THREE.BoxGeometry(.3,.04,1.0),0x232c37).position.set(x,.02,BELT_Z);
     }
   })();
 
-  // ---- drill press over the line ----
+  // ---- drill press ----
   const press=new THREE.Group();plant.add(press);press.position.set(.3,0,BELT_Z);
   [[-.7,-.75],[-.7,.75],[.7,-.75],[.7,.75]].forEach(([x,z])=>{
-    dual(new THREE.BoxGeometry(.15,2.3,.15),0x39434f,press).position.set(x,1.15,z);
+    dual(new THREE.BoxGeometry(.16,2.3,.16),0x39434f,press).position.set(x,1.15,z);
+    dual(new THREE.BoxGeometry(.3,.04,.3),0x232c37,press).position.set(x,.02,z);
   });
-  dual(new THREE.BoxGeometry(1.7,.15,.15),0x39434f,press).position.set(0,2.3,-.75);
-  dual(new THREE.BoxGeometry(1.7,.15,.15),0x39434f,press).position.set(0,2.3,.75);
-  dual(new THREE.BoxGeometry(.15,.15,1.65),0x39434f,press).position.set(0,2.3,0);
+  dual(new THREE.BoxGeometry(1.7,.16,.16),0x39434f,press).position.set(0,2.3,-.75);
+  dual(new THREE.BoxGeometry(1.7,.16,.16),0x39434f,press).position.set(0,2.3,.75);
+  dual(new THREE.BoxGeometry(.16,.16,1.66),0x39434f,press).position.set(0,2.3,0);
+  // guide columns the head slides on
+  [-.3,.3].forEach(x=>{
+    const gcl=dual(new THREE.CylinderGeometry(.035,.035,.95,8),0xc7ccd1,press,.85,.25);
+    gcl.position.set(x,1.9,0);
+  });
   const spindle=new THREE.Group();press.add(spindle);spindle.position.y=2.42;
-  dual(new THREE.CylinderGeometry(.16,.16,.6,10),0xc7ccd1,spindle);
-  const bit=dual(new THREE.CylinderGeometry(.04,.04,.55,8),0xf2a63a,spindle);bit.position.y=-.55;
+  dual(new THREE.BoxGeometry(.5,.34,.42),0x2a3340,spindle).position.y=.28;      // motor housing
+  dual(new THREE.CylinderGeometry(.16,.16,.5,12),0xc7ccd1,spindle,.85,.25);      // quill
+  dual(new THREE.CylinderGeometry(.05,.14,.16,10),0x39434f,spindle).position.y=-.32; // chuck
+  const bit=dual(new THREE.CylinderGeometry(.035,.02,.5,8),0xf2a63a,spindle);bit.position.y=-.62;
+  // small fixture plates beside the rollers under the press
+  [-.62,.62].forEach(z=>{
+    dual(new THREE.BoxGeometry(.9,.05,.14),0x2a3340,press).position.set(0,BELT_TOP-.02,z);
+  });
+  // control cabinet
+  (function(){
+    const cab=new THREE.Group();plant.add(cab);cab.position.set(-1.5,0,-2.1);
+    dual(new THREE.BoxGeometry(.62,1.15,.42),0x2a3340,cab).position.y=.58;
+    dual(new THREE.BoxGeometry(.56,1.02,.02),0x39434f,cab).position.set(0,.58,.22);
+    dual(new THREE.BoxGeometry(.02,.3,.03),0xc7ccd1,cab,.9,.2).position.set(.2,.58,.23);
+    const lampM=new THREE.MeshBasicMaterial({color:0x3ddc84,transparent:true,opacity:.9});
+    const lamp=new THREE.Mesh(new THREE.SphereGeometry(.025,8,8),lampM);
+    lamp.position.set(-.18,1.0,.23);cab.add(lamp);
+  })();
 
-  // ---- pallet rack (input/output store) ----
+  // ---- sparks (drill) ----
+  const sparks=[],sparkG=new THREE.Group();plant.add(sparkG);
+  for(let i=0;i<14;i++){
+    const m=new THREE.Mesh(new THREE.BoxGeometry(.03,.03,.03),
+      new THREE.MeshBasicMaterial({color:i%3?0xf2a63a:0xffd9a0,transparent:true,opacity:0}));
+    sparkG.add(m);sparks.push({m,v:new THREE.Vector3(),life:0});
+  }
+  function burstSparks(){
+    sparks.forEach(s=>{
+      s.life=.5+Math.random()*.4;
+      s.m.position.set(.3,BOXC+.22,BELT_Z);
+      s.v.set((Math.random()-.5)*2.4,1.2+Math.random()*1.6,(Math.random()-.5)*2.4);
+    });
+  }
+
+  // ---- pallet rack ----
   const RACK_X=-8.7, RACK_Z=BELT_Z;
   const rack=new THREE.Group();plant.add(rack);rack.position.set(RACK_X,0,RACK_Z);
   [[-.5,-1],[-.5,1],[.5,-1],[.5,1]].forEach(([x,z])=>{
     dual(new THREE.BoxGeometry(.1,2.5,.1),0x39434f,rack).position.set(x,1.25,z);
   });
+  // diagonal braces
+  [[-.5,0,1],[.5,0,-1]].forEach(([x,,s])=>{
+    const br=dual(new THREE.BoxGeometry(.05,2.15,.05),0x2f3a46,rack);
+    br.position.set(x,1.2,0);br.rotation.x=s*.75;
+  });
   [0.55,1.35,2.15].forEach(y=>{
     dual(new THREE.BoxGeometry(1.05,.08,2.05),0x2a3340,rack).position.y=y;
   });
-  // dressing stock
   [[0.55,-1.1],[0.55,0.4],[1.35,-1.15],[2.15,0.1]].forEach(([y,z])=>{
-    dual(new THREE.BoxGeometry(.42,.4,.42),0xc7ccd1,rack).position.set(0,y+.25,z);
+    dual(new THREE.BoxGeometry(.42,.06,.5),0x6b5335,rack,.1,.85).position.set(0,y+.07,z); // pallet board
+    dual(new THREE.BoxGeometry(.42,.4,.42),0xc7ccd1,rack).position.set(0,y+.3,z);
   });
-  const SLOT=new THREE.Vector3(RACK_X,1.6,RACK_Z); // active pick/restock slot (middle shelf)
+  const SLOT=new THREE.Vector3(RACK_X,1.6,RACK_Z);
+  dual(new THREE.BoxGeometry(.46,.06,.54),0x6b5335,rack,.1,.85).position.set(0,1.42,0); // board under active slot
 
   // ---- output pallet ----
   const PAL=new THREE.Vector3(7.7,0,1.7);
-  dual(new THREE.BoxGeometry(1.25,.12,1.25),0x2a3340).position.set(PAL.x,.06,PAL.z);
+  (function(){
+    const p=new THREE.Group();plant.add(p);p.position.set(PAL.x,0,PAL.z);
+    [-.4,0,.4].forEach(z=>{dual(new THREE.BoxGeometry(1.25,.06,.16),0x6b5335,p,.1,.85).position.set(0,.15,z);});
+    [-.5,0,.5].forEach(x=>{dual(new THREE.BoxGeometry(.14,.12,1.25),0x5a4630,p,.1,.85).position.set(x,.06,0);});
+  })();
 
-  // ---- IK robots ----
+  // ---- IK robots (detailed 6-axis look; kinematics unchanged) ----
   const L1=1.35,L2=1.15,TIPLEN=.42,SH_Y=1.25;
   function makeRobot(x,z){
+    const AMBER=0xd98a2b, DARK=0x2a3340, STEEL=0xc7ccd1;
     const root=new THREE.Group();plant.add(root);root.position.set(x,0,z);
-    dual(new THREE.CylinderGeometry(.55,.62,.35,14),0x2a3340,root).position.y=.17;
+    dual(new THREE.CylinderGeometry(.62,.66,.1,16),DARK,root).position.y=.05;      // base plate
+    for(let i=0;i<6;i++){
+      const a=i/6*Math.PI*2;
+      dual(new THREE.CylinderGeometry(.03,.03,.05,6),STEEL,root,.9,.2).position.set(Math.cos(a)*.55,.12,Math.sin(a)*.55);
+    }
+    dual(new THREE.CylinderGeometry(.48,.56,.26,16),AMBER,root,.35,.5).position.y=.22; // pedestal
     const yawG=new THREE.Group();root.add(yawG);yawG.position.y=.35;
-    dual(new THREE.CylinderGeometry(.28,.32,.9,12),0x39434f,yawG).position.y=.45;
+    dual(new THREE.CylinderGeometry(.4,.44,.32,16),AMBER,yawG,.35,.5).position.y=.16;  // carousel
+    dual(new THREE.BoxGeometry(.26,.28,.34),DARK,yawG).position.set(.34,.22,0);        // J1 motor
+    dual(new THREE.BoxGeometry(.42,.5,.46),AMBER,yawG,.35,.5).position.y=.58;          // column
+    const j2=dual(new THREE.CylinderGeometry(.22,.22,.52,14),DARK,yawG);               // J2 housing
+    j2.rotation.x=Math.PI/2;j2.position.y=.9;
     const shG=new THREE.Group();yawG.add(shG);shG.position.y=.9;
-    dual(new THREE.BoxGeometry(.24,L1,.24),0xf2a63a,shG).position.y=L1/2;
+    [-0.16,0.16].forEach(zz=>{                                                          // upper arm plates
+      dual(new THREE.BoxGeometry(.3,L1,.08),AMBER,shG,.35,.5).position.set(0,L1/2,zz);
+    });
+    dual(new THREE.BoxGeometry(.22,L1*.72,.2),AMBER,shG,.35,.5).position.y=L1/2;        // core rib
+    dual(new THREE.BoxGeometry(.3,.34,.42),DARK,shG).position.set(.24,.12,0);           // counterweight
+    const dress=dual(new THREE.TorusGeometry(.3,.028,6,12,Math.PI*.9),0x1c242e,shG,.2,.8); // cable dress
+    dress.position.set(-.1,.25,0);dress.rotation.y=Math.PI/2;
+    const j3=dual(new THREE.CylinderGeometry(.17,.17,.44,12),DARK,shG);                 // J3 housing
+    j3.rotation.x=Math.PI/2;j3.position.y=L1;
     const elG=new THREE.Group();shG.add(elG);elG.position.y=L1;
-    dual(new THREE.BoxGeometry(.19,L2,.19),0xf2a63a,elG).position.y=L2/2;
+    dual(new THREE.BoxGeometry(.22,L2*.62,.22),AMBER,elG,.35,.5).position.y=L2*.31;     // forearm lower
+    dual(new THREE.BoxGeometry(.17,L2*.46,.17),AMBER,elG,.35,.5).position.y=L2*.76;     // forearm taper
+    dual(new THREE.CylinderGeometry(.09,.09,.2,10),DARK,elG).position.set(.14,L2*.3,0); // J4 motor
     const wrG=new THREE.Group();elG.add(wrG);wrG.position.y=L2;
-    dual(new THREE.BoxGeometry(.3,.14,.3),0xc7ccd1,wrG).position.y=.07;
-    dual(new THREE.BoxGeometry(.06,.24,.1),0xc7ccd1,wrG).position.set(-.1,.26,0);
-    dual(new THREE.BoxGeometry(.06,.24,.1),0xc7ccd1,wrG).position.set(.1,.26,0);
+    const j5=dual(new THREE.CylinderGeometry(.11,.11,.28,12),DARK,wrG);                 // J5 housing
+    j5.rotation.x=Math.PI/2;
+    dual(new THREE.CylinderGeometry(.13,.13,.05,14),STEEL,wrG,.9,.2).position.y=.1;     // flange
+    dual(new THREE.BoxGeometry(.24,.1,.2),DARK,wrG).position.y=.17;                     // gripper body
+    [-0.09,0.09].forEach(xx=>{                                                          // fingers
+      dual(new THREE.BoxGeometry(.05,.2,.08),STEEL,wrG,.85,.25).position.set(xx,.31,0);
+      dual(new THREE.BoxGeometry(.06,.05,.09),0x1c242e,wrG,.2,.8).position.set(xx,.415,0);
+    });
     const home={psi:Math.PI/2,a:.55,b:1.0,w:Math.PI-1.55};
-    const rb={base:new THREE.Vector3(x,0,z),yawG,shG,elG,wrG,home,pose:{...home},_from:null,_to:null};
+    const rb={base:new THREE.Vector3(x,0,z),home,pose:{...home},_from:null,_to:null};
     rb.apply=function(){
       yawG.rotation.y=rb.pose.psi;
       shG.rotation.z=rb.pose.a;
@@ -1176,32 +1265,62 @@ document.querySelectorAll('.station__head').forEach(h=>{
   // ---- gantry crane ----
   [[-8.4,-4.7],[-8.4,4.7],[8.4,-4.7],[8.4,4.7]].forEach(([x,z])=>{
     dual(new THREE.BoxGeometry(.22,3.7,.22),0x39434f).position.set(x,1.85,z);
+    dual(new THREE.BoxGeometry(.4,.05,.4),0x232c37).position.set(x,.025,z);
   });
   dual(new THREE.BoxGeometry(17.2,.2,.26),0x39434f).position.set(0,3.7,-4.7);
   dual(new THREE.BoxGeometry(17.2,.2,.26),0x39434f).position.set(0,3.7,4.7);
   const bridge=new THREE.Group();plant.add(bridge);
-  dual(new THREE.BoxGeometry(.28,.24,9.7),0x5e6a78,bridge).position.y=3.95;
+  dual(new THREE.BoxGeometry(.3,.26,9.7),0x5e6a78,bridge).position.y=3.95;
+  [-4.72,4.72].forEach(z=>{                                                    // end trucks
+    dual(new THREE.BoxGeometry(.6,.22,.4),0xf2a63a,bridge,.35,.5).position.set(0,3.82,z);
+  });
   const trolley=new THREE.Group();bridge.add(trolley);
-  dual(new THREE.BoxGeometry(.55,.3,.55),0xf2a63a,trolley).position.y=3.72;
-  const cable=dual(new THREE.CylinderGeometry(.022,.022,1,6),0xc7ccd1,trolley);
-  const hook=dual(new THREE.BoxGeometry(.34,.2,.34),0xc7ccd1,trolley);
+  dual(new THREE.BoxGeometry(.6,.3,.55),0xf2a63a,trolley,.35,.5).position.y=3.74;
+  [[-.24,-.2],[-.24,.2],[.24,-.2],[.24,.2]].forEach(([x,z])=>{                 // trolley wheels
+    const wh=dual(new THREE.CylinderGeometry(.07,.07,.05,10),0x1c242e,trolley,.2,.8);
+    wh.rotation.x=Math.PI/2;wh.position.set(x,3.98,z);
+  });
+  const cable=dual(new THREE.CylinderGeometry(.022,.022,1,6),0xc7ccd1,trolley,.85,.25);
+  const hookG=new THREE.Group();trolley.add(hookG);
+  dual(new THREE.BoxGeometry(.2,.12,.2),0x2a3340,hookG).position.y=.06;        // hook block
+  const hookArc=dual(new THREE.TorusGeometry(.09,.028,8,12,Math.PI*1.4),0xc7ccd1,hookG,.85,.25);
+  hookArc.position.y=-.07;hookArc.rotation.z=Math.PI*.8;
   const gantry={x:3.0,z:-2.2,drop:1.1};
   function applyGantry(){
     bridge.position.x=gantry.x;
     trolley.position.z=gantry.z;
     cable.scale.y=gantry.drop;
     cable.position.y=3.6-gantry.drop/2;
-    hook.position.y=3.6-gantry.drop;
+    hookG.position.y=3.6-gantry.drop;
   }
   applyGantry();
   const hookPoint=()=>new THREE.Vector3(gantry.x,3.6-gantry.drop,gantry.z);
 
   // ---- AGV ----
   const agv=new THREE.Group();plant.add(agv);
-  dual(new THREE.BoxGeometry(1.15,.26,.72),0x39434f,agv).position.y=.2;
+  dual(new THREE.BoxGeometry(1.2,.2,.75),0x39434f,agv).position.y=.19;                 // chassis
+  dual(new THREE.BoxGeometry(1.06,.08,.62),0x2a3340,agv).position.y=.33;               // deck
+  [[.61,0,.04,.66],[-.61,0,.04,.66],[0,.385,1.22,.04]].forEach(([x,z,lx,lz])=>{        // bumpers
+    dual(new THREE.BoxGeometry(lx,.06,lz),0xf2a63a,agv,.3,.6).position.set(x,.14,z);
+  });
+  [[-.42,-.32],[-.42,.32],[.42,-.32],[.42,.32]].forEach(([x,z])=>{                     // wheels
+    const wh=dual(new THREE.CylinderGeometry(.095,.095,.07,12),0x1c242e,agv,.2,.85);
+    wh.rotation.x=Math.PI/2;wh.position.set(x,.095,z);
+  });
+  const lid=dual(new THREE.CylinderGeometry(.05,.06,.09,10),0x1c242e,agv,.2,.7);       // lidar
+  lid.position.set(.52,.42,0);
+  for(let i=0;i<4;i++){                                                                 // roller deck
+    const r=dual(new THREE.CylinderGeometry(.03,.03,.56,8),0x5e6a78,agv,.8,.3);
+    r.rotation.x=Math.PI/2;r.position.set(-.33+i*.22,.4,0);
+  }
   const beaconMat=new THREE.MeshBasicMaterial({color:0xe24b4a,transparent:true});
-  const beacon=new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,.12,8),beaconMat);
-  beacon.position.set(-.42,.42,0);agv.add(beacon);
+  const beacon=new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,.11,8),beaconMat);
+  beacon.position.set(-.5,.44,0);agv.add(beacon);
+  const hlMat=new THREE.MeshBasicMaterial({color:0xfff2cf,transparent:true,opacity:.85});
+  [-.2,.2].forEach(z=>{
+    const hl=new THREE.Mesh(new THREE.BoxGeometry(.02,.04,.08),hlMat);
+    hl.position.set(.61,.2,z);agv.add(hl);
+  });
   const AGV_WAIT=new THREE.Vector3(-6.2,0,3.4);
   agv.position.copy(AGV_WAIT);
   function agvDrive(from,to,k){
@@ -1209,32 +1328,52 @@ document.querySelectorAll('.station__head').forEach(h=>{
     const dx=to.x-from.x,dz=to.z-from.z;
     if(Math.hypot(dx,dz)>.01)agv.rotation.y=Math.atan2(-dz,dx);
   }
+  // floor path markings for the AGV
+  (function(){
+    const mk=(x,z,lx,lz)=>{
+      const m=new THREE.Mesh(new THREE.BoxGeometry(lx,.012,lz),
+        new THREE.MeshBasicMaterial({color:0xf2a63a,transparent:true,opacity:.28}));
+      m.position.set(x,.012,z);plant.add(m);
+    };
+    mk(-7.45,3.4,2.7,.06); mk(-8.7,2.3,.06,2.4);
+  })();
 
   // ---- stack light ----
-  dual(new THREE.CylinderGeometry(.05,.05,1.1,8),0x39434f).position.set(1.9,.55,-1.9);
+  (function(){
+    dual(new THREE.BoxGeometry(.16,.06,.16),0x232c37).position.set(1.9,.03,-1.9);
+    dual(new THREE.CylinderGeometry(.045,.045,1.05,8),0x39434f).position.set(1.9,.55,-1.9);
+    dual(new THREE.CylinderGeometry(.07,.07,.04,10),0x1c242e).position.set(1.9,1.75,-1.9);
+  })();
   const slMats=[0xe24b4a,0xf2a63a,0x3ddc84].map(c=>new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:.18}));
   slMats.forEach((m,i)=>{
-    const lens=new THREE.Mesh(new THREE.CylinderGeometry(.13,.13,.16,10),m);
+    const lens=new THREE.Mesh(new THREE.CylinderGeometry(.13,.13,.17,12),m);
     lens.position.set(1.9,1.18+i*.19,-1.9);plant.add(lens);
   });
-  let lightState=2; // 0 red 1 amber 2 green
+  let lightState=2;
 
   // ---- scan plane (virtual only) ----
   const scanMat=new THREE.MeshBasicMaterial({color:0x5ee6d0,transparent:true,opacity:.07,side:THREE.DoubleSide,depthWrite:false});
   const scan=new THREE.Mesh(new THREE.PlaneGeometry(12,4.6),scanMat);
   scan.rotation.y=Math.PI/2;scan.position.y=2.3;plant.add(scan);
 
-  // ---- the part ----
-  const part=dual(new THREE.BoxGeometry(.42,.4,.42),0xf2a63a);
+  // ---- the part (with drilled hole) ----
+  const part=dual(new THREE.BoxGeometry(.42,.4,.42),0xf2a63a,null,.4,.5);
   part.position.copy(SLOT);
   const partWireM=part.children[0].material, partSolidM=part.children[1].material;
+  const hole=new THREE.Group();part.add(hole);hole.position.y=.201;hole.visible=false;
+  hole.add(new THREE.Mesh(new THREE.CylinderGeometry(.07,.07,.015,14),
+    new THREE.MeshBasicMaterial({color:0x0a0e14})));
+  const holeRing=new THREE.Mesh(new THREE.TorusGeometry(.07,.008,6,18),
+    new THREE.MeshBasicMaterial({color:0x8b95a1}));
+  holeRing.rotation.x=Math.PI/2;holeRing.position.y=.008;hole.add(holeRing);
   function setProcessed(on){
     partSolidM.color.set(on?0x3ddc84:0xf2a63a);
     partWireM.color.set(on?0x3ddc84:0x5ee6d0);
+    hole.visible=on;
   }
-  let carrier=null; // 'A'|'B'|'hook'|'agv'|null
+  let carrier=null;
 
-  // ---- sequence engine ----
+  // ---- sequence engine (unchanged choreography) ----
   const seq=[];let stage='INIT';
   function step(d,fn,onStart,label){seq.push({d,fn,onStart,label});}
   function armStep(rb,d,tipTarget,label){
@@ -1253,10 +1392,9 @@ document.querySelectorAll('.station__head').forEach(h=>{
   const BELT_START_TOP=hover(BELT_START,.21);
   const BELT_END=new THREE.Vector3(5.6,BOXC,BELT_Z);
   const BELT_END_TOP=hover(BELT_END,.21);
-  const PAL_BOX=new THREE.Vector3(PAL.x,.33,PAL.z);
+  const PAL_BOX=new THREE.Vector3(PAL.x,.42,PAL.z);
   const PAL_BOX_TOP=hover(PAL_BOX,.21);
 
-  // 1. Robot A: rack → belt
   armStep(armA,1.0,()=>hover(SLOT_TOP,.35),'PICK · RACK');
   armStep(armA,0.5,()=>SLOT_TOP,'PICK · RACK');
   step(.25,null,()=>{carrier='A';},'PICK · RACK');
@@ -1264,7 +1402,6 @@ document.querySelectorAll('.station__head').forEach(h=>{
   armStep(armA,1.35,()=>hover(BELT_START_TOP,.5),'TRANSFER · TO LINE');
   armStep(armA,0.55,()=>BELT_START_TOP,'TRANSFER · TO LINE');
   step(.25,null,()=>{carrier=null;part.position.copy(BELT_START);},'TRANSFER · TO LINE');
-  // 2. convey to press (arm A homes concurrently)
   step(2.3,k=>{
     part.position.x=lerp(BELT_START.x,.3,k);
     const k2=Math.min(k*2.2,1);
@@ -1272,13 +1409,10 @@ document.querySelectorAll('.station__head').forEach(h=>{
     armA.pose={psi:alerp(p.psi,q.psi,k2),a:lerp(p.a,q.a,k2),b:lerp(p.b,q.b,k2),w:lerp(p.w,q.w,k2)};
     armA.apply();
   },()=>{armA._from={...armA.pose};armA._to={...armA.home};},'CONVEY · TO PRESS');
-  // 3. drill
   step(.45,k=>{spindle.position.y=lerp(2.42,2.16,k);},()=>{lightState=1;},'DRILL · PLUNGE');
-  step(.9,null,()=>{},'DRILL · CYCLE');
+  step(.9,null,()=>{burstSparks();},'DRILL · CYCLE');
   step(.45,k=>{spindle.position.y=lerp(2.16,2.42,k);},()=>{setProcessed(true);},'DRILL · RETRACT');
-  // 4. convey to end
   step(2.2,k=>{part.position.x=lerp(.3,BELT_END.x,k);},()=>{lightState=2;},'CONVEY · TO PICKUP');
-  // 5. Robot B: belt → pallet
   armStep(armB,0.9,()=>hover(BELT_END_TOP,.4),'PICK · LINE END');
   armStep(armB,0.5,()=>BELT_END_TOP,'PICK · LINE END');
   step(.25,null,()=>{carrier='B';},'PICK · LINE END');
@@ -1286,7 +1420,6 @@ document.querySelectorAll('.station__head').forEach(h=>{
   armStep(armB,1.2,()=>hover(PAL_BOX_TOP,.55),'PLACE · PALLET');
   armStep(armB,0.6,()=>PAL_BOX_TOP,'PLACE · PALLET');
   step(.25,null,()=>{carrier=null;part.position.copy(PAL_BOX);},'PLACE · PALLET');
-  // 6. gantry: pallet → AGV (arm B homes concurrently)
   step(1.6,k=>{
     gantry.x=lerp(gantry._x0,PAL.x,k);gantry.z=lerp(gantry._z0,PAL.z,k);applyGantry();
     const k2=Math.min(k*1.8,1);
@@ -1294,14 +1427,13 @@ document.querySelectorAll('.station__head').forEach(h=>{
     armB.pose={psi:alerp(p.psi,q.psi,k2),a:lerp(p.a,q.a,k2),b:lerp(p.b,q.b,k2),w:lerp(p.w,q.w,k2)};
     armB.apply();
   },()=>{gantry._x0=gantry.x;gantry._z0=gantry.z;armB._from={...armB.pose};armB._to={...armB.home};},'CRANE · APPROACH');
-  step(.8,k=>{gantry.drop=lerp(1.1,2.97,k);applyGantry();},null,'CRANE · LOWER');
+  step(.8,k=>{gantry.drop=lerp(1.1,2.88,k);applyGantry();},null,'CRANE · LOWER');
   step(.2,null,()=>{carrier='hook';},'CRANE · GRIP');
-  step(.8,k=>{gantry.drop=lerp(2.97,1.1,k);applyGantry();},null,'CRANE · HOIST');
+  step(.8,k=>{gantry.drop=lerp(2.88,1.1,k);applyGantry();},null,'CRANE · HOIST');
   step(2.2,k=>{gantry.x=lerp(PAL.x,AGV_WAIT.x,k);gantry.z=lerp(PAL.z,AGV_WAIT.z,k);applyGantry();},null,'CRANE · TRAVERSE');
-  step(.8,k=>{gantry.drop=lerp(1.1,2.76,k);applyGantry();},null,'CRANE · LOWER');
+  step(.8,k=>{gantry.drop=lerp(1.1,2.64,k);applyGantry();},null,'CRANE · LOWER');
   step(.2,null,()=>{carrier='agv';},'HANDOFF · TO AGV');
-  step(.6,k=>{gantry.drop=lerp(2.76,1.1,k);applyGantry();},null,'HANDOFF · TO AGV');
-  // 7. AGV returns part to rack (gantry parks concurrently)
+  step(.6,k=>{gantry.drop=lerp(2.64,1.1,k);applyGantry();},null,'HANDOFF · TO AGV');
   const AGV_P1=new THREE.Vector3(-8.7,0,3.4), AGV_P2=new THREE.Vector3(-8.7,0,1.2);
   step(2.2,k=>{
     agvDrive(AGV_WAIT,AGV_P1,k);
@@ -1309,7 +1441,7 @@ document.querySelectorAll('.station__head').forEach(h=>{
   },null,'AGV · RETURN RUN');
   step(1.5,k=>{agvDrive(AGV_P1,AGV_P2,k);},null,'AGV · RETURN RUN');
   step(1.0,k=>{
-    const from=agvTop(), mid=new THREE.Vector3(lerp(from.x,SLOT.x,.5),2.2,lerp(from.z,SLOT.z,.5));
+    const from=agvTop(), mid=new THREE.Vector3(lerp(from.x,SLOT.x,.5),2.3,lerp(from.z,SLOT.z,.5));
     const a=new THREE.Vector3().lerpVectors(from,mid,k), b=new THREE.Vector3().lerpVectors(mid,SLOT,k);
     part.position.lerpVectors(a,b,k);
   },()=>{carrier=null;},'RESTOCK · RACK');
@@ -1318,7 +1450,7 @@ document.querySelectorAll('.station__head').forEach(h=>{
   step(2.0,k=>{agvDrive(AGV_P1,AGV_WAIT,k);},null,'AGV · TO STANDBY');
   step(.8,null,()=>{},'CYCLE · COMPLETE');
 
-  function agvTop(){return new THREE.Vector3(agv.position.x,.54,agv.position.z);}
+  function agvTop(){return new THREE.Vector3(agv.position.x,.65,agv.position.z);}
   let si=0,stime=0,started=false;
   function runSeq(dt){
     const s=seq[si];
@@ -1363,14 +1495,68 @@ document.querySelectorAll('.station__head').forEach(h=>{
     }
   },{passive:true});
   hero.addEventListener('wheel',e=>{
-    if(!(e.ctrlKey||e.metaKey))return;
+    if(e.deltaY>0&&camDistT>=ZMAX-.01)return; // fully zoomed out -> let the page scroll
     e.preventDefault();
     camDistT=Math.max(ZMIN,Math.min(ZMAX,camDistT*(1+e.deltaY*.0012)));
   },{passive:false});
   hero.addEventListener('dblclick',()=>{camDistT=camDistT>9?6.4:13.2;});
-  const zi=document.getElementById('zoom-in'),zo=document.getElementById('zoom-out');
-  if(zi)zi.addEventListener('click',()=>{camDistT=Math.max(ZMIN,camDistT*.78);});
-  if(zo)zo.addEventListener('click',()=>{camDistT=Math.min(ZMAX,camDistT*1.28);});
+  // ---- sound (hero only, default muted) ----
+  let audio=null,muted=true,beepPhase=0;
+  function createAudio(){
+    const AC=window.AudioContext||window.webkitAudioContext;
+    const ctx=new AC();
+    const master=ctx.createGain();master.gain.value=0;master.connect(ctx.destination);
+    const nb=ctx.createBuffer(1,ctx.sampleRate*2,ctx.sampleRate);
+    const nd=nb.getChannelData(0);
+    for(let i=0;i<nd.length;i++)nd[i]=Math.random()*2-1;
+    const mkNoise=()=>{const s=ctx.createBufferSource();s.buffer=nb;s.loop=true;s.start();return s;};
+    const mkOsc=(type,f)=>{const o=ctx.createOscillator();o.type=type;o.frequency.value=f;o.start();return o;};
+    const mkGain=v=>{const g=ctx.createGain();g.gain.value=v;g.connect(master);return g;};
+    const v={};
+    // conveyor: low rumble
+    v.conv=mkGain(0);
+    {const f=ctx.createBiquadFilter();f.type='lowpass';f.frequency.value=230;mkNoise().connect(f);f.connect(v.conv);}
+    // drill: motor + grind
+    v.drill=mkGain(0);mkOsc('sawtooth',96).connect(v.drill);
+    v.grind=mkGain(0);
+    {const f=ctx.createBiquadFilter();f.type='bandpass';f.frequency.value=2600;f.Q.value=2.5;mkNoise().connect(f);f.connect(v.grind);}
+    // robot servos
+    v.robot=mkGain(0);
+    {const f=ctx.createBiquadFilter();f.type='bandpass';f.frequency.value=900;f.Q.value=3;
+     v.robotOsc=mkOsc('sawtooth',230);v.robotOsc.connect(f);f.connect(v.robot);}
+    // gantry: slow beat hum
+    v.gantry=mkGain(0);mkOsc('triangle',56).connect(v.gantry);mkOsc('triangle',59).connect(v.gantry);
+    // agv: electric hum + reverse beeper
+    v.agv=mkGain(0);mkOsc('triangle',132).connect(v.agv);
+    v.beep=mkGain(0);mkOsc('square',880).connect(v.beep);
+    return {ctx,master,v};
+  }
+  const sndBtn=document.getElementById('sound-toggle');
+  if(sndBtn)sndBtn.addEventListener('click',()=>{
+    if(!audio)audio=createAudio();
+    audio.ctx.resume();
+    muted=!muted;
+    sndBtn.textContent=muted?'SOUND: OFF':'SOUND: ON';
+    sndBtn.classList.toggle('is-on',!muted);
+  });
+  function updateAudio(dt){
+    if(!audio)return;
+    const v=audio.v;
+    const tg={conv:0,drill:0,grind:0,robot:0,gantry:0,agv:0};
+    if(stage.startsWith('CONVEY')){tg.conv=.5;tg.robot=.08;}
+    if(stage==='DRILL · PLUNGE'||stage==='DRILL · RETRACT')tg.drill=.16;
+    if(stage==='DRILL · CYCLE'){tg.drill=.3;tg.grind=.22;}
+    if(stage.startsWith('PICK')||stage.startsWith('TRANSFER')||stage.startsWith('PLACE'))tg.robot=.26;
+    if(stage.startsWith('CRANE')||stage.startsWith('HANDOFF'))tg.gantry=.34;
+    if(stage.startsWith('AGV')){tg.agv=.3;}
+    ['conv','drill','grind','robot','gantry','agv'].forEach(k=>{
+      v[k].gain.value+=(tg[k]-v[k].gain.value)*.08;
+    });
+    v.robotOsc.frequency.value=230+Math.sin(t*11)*26+Math.sin(t*2.7)*14;
+    beepPhase+=dt;
+    v.beep.gain.value=(stage.startsWith('AGV')&&beepPhase%0.8<0.09)?.09:0;
+    audio.master.gain.value+=((muted?0:.55)-audio.master.gain.value)*.06;
+  }
 
   // ---- animate ----
   let mix=0,t=0,last=performance.now();
@@ -1386,13 +1572,23 @@ document.querySelectorAll('.station__head').forEach(h=>{
     floorMat.opacity=mix*.95;
     scanMat.opacity=(1-mix)*.075;
     key.color.set(isPhys?0xf2a63a:0x5ee6d0);
+    sun.intensity=.85*mix;
 
     runSeq(dt);
     glue();
-    bit.rotation.y+=dt*(stage.startsWith('DRILL')?34:5);
+    bit.rotation.y+=dt*(stage.startsWith('DRILL')?36:4);
+    sparks.forEach(s=>{
+      if(s.life>0){
+        s.life-=dt;
+        s.v.y-=6*dt;
+        s.m.position.addScaledVector(s.v,dt);
+        s.m.material.opacity=Math.max(0,s.life*1.8)*(1-mix*.3);
+      } else s.m.material.opacity=0;
+    });
     beaconMat.opacity=.3+(Math.sin(t*7)>0?.7:0);
     slMats.forEach((m,i)=>m.opacity=i===lightState?.95:.15);
     scan.position.x=Math.sin(t*.32)*7.4;
+    updateAudio(dt);
     if(autoRot&&!dragging)plant.rotation.y+=dt*.07;
     camDist+=(camDistT-camDist)*.06;
     camera.position.set(0,camDist*.44,camDist);
