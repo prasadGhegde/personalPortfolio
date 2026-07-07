@@ -72,8 +72,8 @@
   #factory-canvas{ position:absolute; inset:0; width:100%; height:100%; touch-action:none; }
   .hud{ position:absolute; z-index:5; font-family:var(--mono); font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--text-dim); pointer-events:none; }
   .hud--tl{ top:2.2rem; left:8%; display:flex; align-items:center; gap:.6rem; }
-  .hud--bl{ bottom:2.4rem; left:8%; }
-  .hud--br{ bottom:2.4rem; right:8%; color:var(--accent); transition:color .3s; }
+  .hud--bl{ bottom:5.2rem; left:8%; }
+  .hud--br{ bottom:2.4rem; right:8%; color:var(--accent); transition:color .3s; max-width:44%; text-align:right; }
   .hero__content{ position:relative; z-index:5; height:100%; display:flex; flex-direction:column; justify-content:center; padding:0 8%; max-width:820px; pointer-events:none; }
   .hero__content a, .hero__content button{ pointer-events:auto; }
   .hero__name{ font-family:var(--display); font-weight:700; font-size:clamp(2.1rem,5.2vw,3.9rem); line-height:1.15; text-shadow:0 2px 18px rgba(13,17,23,.9), 0 0 40px rgba(13,17,23,.7); }
@@ -185,7 +185,7 @@
   .contact__links{ margin-top:2.2rem; display:flex; gap:2rem; font-family:var(--mono); font-size:.78rem; letter-spacing:.1em; text-transform:uppercase; color:var(--text-dim); }
   .contact__links a{ text-decoration:none; transition:color .2s; }
   .contact__links a:hover{ color:var(--accent); }
-  .build-tag{ position:absolute; right:8%; bottom:2.2rem; font-family:var(--mono); font-size:.65rem; color:var(--text-dim); letter-spacing:.1em; }
+  .build-tag{ display:inline-block; margin-top:3rem; font-family:var(--mono); font-size:.65rem; color:var(--text-dim); letter-spacing:.1em; }
 
   @media (max-width:980px){
     .twin-frame{ flex-direction:column; }
@@ -217,6 +217,7 @@
   <span class="lbl-v">Virtual</span>
   <div class="sw"></div>
   <span class="lbl-p">Physical</span>
+  <span class="fs-btn" id="fs-toggle" title="Expand the live cell to fullscreen">⛶</span>
 </div>
 
 <section class="hero" id="hero">
@@ -225,6 +226,7 @@
   <div class="hud hud--bl">DRAG ROTATE · SCROLL / PINCH ZOOM · DBL-CLICK RESET</div>
   <div class="hero-zoom"><button id="sound-toggle" aria-label="Toggle sound">SOUND: OFF</button></div>
   <div class="hud hud--br" id="hud-mode">MODE: VIRTUAL · MIX 0.00</div>
+  <button class="fs-exit" id="fs-exit">✕ COLLAPSE</button>
   <div class="hero__content">
     <p class="eyebrow"><span class="dot"></span>Munich, Germany</p>
     <h1 class="hero__name">Ambaprasad<br>Ganapathi Hegde</h1>
@@ -241,15 +243,13 @@
     <div class="hmi" data-probe="HMI|Styled after a SIMATIC WinCC operator panel — every button really drives the twin below. Try MANUAL.">
       <div class="hmi__title">LINE 01 · OPERATOR PANEL</div>
       <div class="hmi__row">
-        <button class="hmi-btn hmi-btn--active" id="twin-auto-btn">AUTO</button>
-        <button class="hmi-btn" id="twin-man-btn">MANUAL</button>
-      </div>
-      <div class="hmi__row">
         <button class="hmi-btn hmi-btn--green" id="twin-start">START</button>
         <button class="hmi-btn hmi-btn--red" id="twin-stop">STOP</button>
         <button class="hmi-btn" id="twin-reset">RESET</button>
       </div>
       <div class="hmi__row">
+        <button class="hmi-btn hmi-btn--active" id="twin-auto-btn">AUTO</button>
+        <button class="hmi-btn" id="twin-man-btn">MANUAL</button>
         <button class="hmi-btn" id="twin-back">◀ BWD</button>
         <button class="hmi-btn" id="twin-fwd">FWD ▶</button>
         <button class="hmi-btn" id="twin-fast">FAST</button>
@@ -367,7 +367,7 @@
   .station__chev{ font-family:var(--mono); color:var(--text-dim); transition:transform .3s; }
   .station.open .station__chev{ transform:rotate(90deg); }
   .station__body{ display:none; padding:0 1.5rem 1.5rem; }
-  .station.open .station__body{ display:grid; grid-template-columns:repeat(5,1fr); gap:1rem; }
+  .station.open .station__body{ display:block; }
   .sfield .sf-k{ font-family:var(--mono); font-size:.58rem; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); margin-bottom:.45rem; transition:color .3s; }
   .sfield .sf-v{ font-size:.8rem; font-weight:300; color:var(--text-dim); line-height:1.6; }
   .sfield .todo{ color:#5f6b78; font-style:italic; }
@@ -406,12 +406,42 @@
   .changelog-mini summary{ color:var(--text-dim); cursor:pointer; letter-spacing:.12em; font-size:.62rem; text-transform:uppercase; }
   .changelog-mini .ver{ color:var(--accent); margin-right:.4rem; transition:color .3s; }
   .changelog-mini .cur{ color:var(--green); border:1px solid var(--green); padding:.02rem .35rem; font-size:.56rem; margin:0 .5rem 0 .35rem; }
+  #alerts{ position:fixed; right:1.6rem; top:5.4rem; z-index:180; display:flex; flex-direction:column; gap:.6rem; max-width:340px; align-items:flex-end; }
+  #alerts .toast{ width:100%; }
+  /* --- industrial timeline overhaul --- */
+  .st-badge{ width:30px; height:30px; flex:none; border:1px solid var(--panel-border); background:var(--bg-2); padding:3px; box-sizing:content-box; }
+  .st-grid{ display:grid; grid-template-columns:1.15fr 1.15fr .9fr; gap:1rem; }
+  .station .sfield{ border:1px solid var(--panel-border); background:var(--bg-2); padding:1rem 1.1rem 1.1rem; border-top:2px solid var(--panel-border); min-height:100%; }
+  .sfield--problem{ border-top-color:var(--red); }
+  .sfield--built{ border-top-color:var(--accent); }
+  .sfield--tools{ border-top-color:var(--steel); }
+  .station .sf-k{ display:flex; align-items:center; gap:.45rem; }
+  .station .sf-k::before{ content:'▸'; font-size:.7rem; }
+  .sfield--problem .sf-k{ color:var(--red); }
+  .sfield--built .sf-k{ color:var(--accent); }
+  .sfield--tools .sf-k{ color:var(--steel); }
+  .st-impact{ margin-top:1rem; border:1px solid var(--panel-border); border-left:3px solid var(--green); background:var(--bg-2); padding:.85rem 1.1rem; display:flex; gap:.9rem; align-items:baseline; flex-wrap:wrap; }
+  .st-impact .imp-k{ font-family:var(--mono); font-size:.58rem; letter-spacing:.14em; text-transform:uppercase; color:var(--green); flex:none; }
+  .st-impact .imp-v{ font-size:.84rem; font-weight:300; color:var(--text); line-height:1.6; }
+  .st-learned{ margin-top:.8rem; font-family:var(--mono); font-size:.74rem; color:var(--accent); line-height:1.7; transition:color .3s; }
+  .st-learned::before{ content:'> LEARNED: '; color:var(--text-dim); letter-spacing:.1em; }
+  .st-learned.todo{ color:#5f6b78; font-style:italic; }
+  @media (max-width:980px){ .st-grid{ grid-template-columns:1fr; } }
+  #mode-toggle .fs-btn{ margin-left:.5rem; padding-left:.7rem; border-left:1px solid var(--panel-border); color:var(--text-dim); font-size:.95rem; line-height:1; transition:color .2s; }
+  #mode-toggle .fs-btn:hover{ color:var(--accent); }
+  .fs-exit{ display:none; position:absolute; top:1.3rem; right:1.6rem; z-index:9; font-family:var(--mono); font-size:.62rem; letter-spacing:.14em;
+    color:var(--text-dim); background:rgba(13,17,23,.85); border:1px solid var(--panel-border); padding:.55rem .9rem; backdrop-filter:blur(6px); }
+  .fs-exit:hover{ color:var(--accent); border-color:var(--accent); }
+  body.hero-fs{ overflow:hidden; }
+  body.hero-fs .hero{ position:fixed; inset:0; z-index:135; height:100vh; min-height:0; }
+  body.hero-fs .hero__content, body.hero-fs .hero__scroll{ display:none; }
+  body.hero-fs #mode-toggle{ z-index:140; }
+  .hero:fullscreen .hero__content, .hero:fullscreen .hero__scroll{ display:none; }
   .sakura{ position:fixed; top:-3%; z-index:170; border-radius:0 60% 60% 60%; background:linear-gradient(135deg,#fbd8e1,#f2a6b8); pointer-events:none; }
   @media (max-width:980px){
     .ds-grid{ grid-template-columns:1fr; }
     .deploy-flex{ flex-direction:column; }
     .deploy-list{ width:100%; }
-    .station.open .station__body{ grid-template-columns:1fr 1fr; }
   }
 </style>
 
@@ -445,12 +475,13 @@
   <div class="deploy-flex reveal">
     <div class="deploy-map" id="globe-holder">
       <canvas id="globe-canvas"></canvas>
-      <p class="globe-hint">DRAG TO SPIN THE EARTH · ACTIVE SITES PULSING</p>
+      <p class="globe-hint">DRAG TO SPIN · SCROLL TO ZOOM · SITES PULSING</p>
     </div>
     <div class="deploy-list">
-      <div class="site" ><p class="s-name">Spartanburg, USA</p><p class="s-meta"><span class="s-flag">HiL / SiL</span> · Gen6 HV Battery VC</p></div>
+      <div class="site"><p class="s-name">Munich, Germany</p><p class="s-meta"><span class="s-flag">★ Home base</span> · BMW VC &amp; Digitalization</p></div>
+      <div class="site"><p class="s-name">Spartanburg, USA</p><p class="s-meta"><span class="s-flag">HiL / SiL</span> · Gen6 HV Battery VC</p></div>
       <div class="site"><p class="s-name">Debrecen, Hungary</p><p class="s-meta"><span class="s-flag">HiL / SiL</span> · Gen6 HV Battery VC</p></div>
-      <div class="site"><p class="s-name">Dingolfing, Germany</p><p class="s-meta"><span class="s-flag">Home plant</span> · VC &amp; Digital Lab</p></div>
+      <div class="site"><p class="s-name">Dingolfing, Germany</p><p class="s-meta"><span class="s-flag">BMW plant</span> · VC &amp; Digital Lab</p></div>
       <div class="site"><p class="s-name">Shenyang, China</p><p class="s-meta"><span class="s-flag">HiL / SiL</span> · Gen6 HV Battery VC</p></div>
     </div>
   </div>
@@ -463,63 +494,75 @@
   <div class="belt-rail reveal"><div class="pallet"></div><div class="pallet" style="animation-delay:-4.5s;"></div></div>
   <div id="stations">
     <div class="station reveal open">
-      <div class="station__head"><span class="station__num">STN 06</span><p class="station__role">Specialist, Virtual Commissioning &amp; Digitalization <span>· BMW (via Brunel GmbH)</span></p><span class="station__dates">01/2025 — PRESENT</span><span class="station__chev">▸</span></div>
+      <div class="station__head"><svg class="st-badge" viewBox="0 0 30 30" aria-label="BMW"><circle cx="15" cy="15" r="13" fill="none" stroke="#8b95a1" stroke-width="1.6"/><path d="M15 4 A11 11 0 0 1 26 15 L15 15 Z" fill="#5b8fd6" opacity=".85"/><path d="M15 26 A11 11 0 0 1 4 15 L15 15 Z" fill="#5b8fd6" opacity=".85"/><path d="M26 15 A11 11 0 0 1 15 26 L15 15 Z" fill="#dfe6ec" opacity=".85"/><path d="M4 15 A11 11 0 0 1 15 4 L15 15 Z" fill="#dfe6ec" opacity=".85"/></svg><span class="station__num">STN 06</span><p class="station__role">Specialist, Virtual Commissioning &amp; Digitalization <span>· BMW (via Brunel GmbH)</span></p><span class="station__dates">01/2025 — PRESENT</span><span class="station__chev">▸</span></div>
       <div class="station__body">
-        <div class="sfield"><p class="sf-k">Problem</p><p class="sf-v">PLC validation was manual, expert-bound, and expensive — repeated for every PLC on every line.</p></div>
-        <div class="sfield"><p class="sf-k">What I built</p><p class="sf-v">Productized the automated VC validation suite (patent-pending) and rolled it out across international sites; added AI workflows for collision checks and change analysis.</p></div>
-        <div class="sfield"><p class="sf-k">Tools</p><p class="sf-v">fe.screen-sim, TIA Portal, C#/.NET, Python, MCP, OPC UA</p></div>
-        <div class="sfield"><p class="sf-k">Impact</p><p class="sf-v">−22% testing cost per PLC, −28% testing cycle time; standardized knowledge reuse.</p></div>
-        <div class="sfield"><p class="sf-k">Learned</p><p class="sf-v">Turning a prototype into a product is 20% code, 80% requirements, architecture and rollout.</p></div>
+        <div class="st-grid">
+          <div class="sfield sfield--problem"><p class="sf-k">Problem</p><p class="sf-v">PLC validation was manual, expert-bound, and expensive — repeated for every PLC on every line.</p></div>
+          <div class="sfield sfield--built"><p class="sf-k">What I built</p><p class="sf-v">Productized the automated VC validation suite (patent-pending) and rolled it out across international sites; added AI workflows for collision checks and change analysis.</p></div>
+          <div class="sfield sfield--tools"><p class="sf-k">Tools</p><div class="skills__tags"><span class="tag">fe.screen-sim</span><span class="tag">TIA Portal</span><span class="tag">C#/.NET</span><span class="tag">Python</span><span class="tag">MCP</span><span class="tag">OPC UA</span></div></div>
+        </div>
+        <div class="st-impact"><span class="imp-k">Impact</span><span class="imp-v">−22% testing cost per PLC · −28% testing cycle time · standardized knowledge reuse across Gen6 battery sites.</span></div>
+        <p class="st-learned">Turning a prototype into a product is 20% code, 80% requirements, architecture and rollout.</p>
       </div>
     </div>
     <div class="station reveal">
-      <div class="station__head"><span class="station__num">STN 05</span><p class="station__role">Master's Thesis Student <span>· BMW</span></p><span class="station__dates">07/2024 — 12/2024</span><span class="station__chev">▸</span></div>
+      <div class="station__head"><svg class="st-badge" viewBox="0 0 30 30" aria-label="BMW"><circle cx="15" cy="15" r="13" fill="none" stroke="#8b95a1" stroke-width="1.6"/><path d="M15 4 A11 11 0 0 1 26 15 L15 15 Z" fill="#5b8fd6" opacity=".85"/><path d="M15 26 A11 11 0 0 1 4 15 L15 15 Z" fill="#5b8fd6" opacity=".85"/><path d="M26 15 A11 11 0 0 1 15 26 L15 15 Z" fill="#dfe6ec" opacity=".85"/><path d="M4 15 A11 11 0 0 1 15 4 L15 15 Z" fill="#dfe6ec" opacity=".85"/></svg><span class="station__num">STN 05</span><p class="station__role">Master's Thesis Student <span>· BMW</span></p><span class="station__dates">07/2024 — 12/2024</span><span class="station__chev">▸</span></div>
       <div class="station__body">
-        <div class="sfield"><p class="sf-k">Problem</p><p class="sf-v">Test knowledge lived in experts' heads; every PLC was tested from scratch.</p></div>
-        <div class="sfield"><p class="sf-k">What I built</p><p class="sf-v">A component-based automation framework for PLC testing in a VC environment — abstract test cases populated with real control data.</p></div>
-        <div class="sfield"><p class="sf-k">Tools</p><p class="sf-v">UML, Asset Administration Shells, OPC UA, MBSE</p></div>
-        <div class="sfield"><p class="sf-k">Impact</p><p class="sf-v">Working prototype proved feasibility and scalability — became the foundation of the patented product.</p></div>
-        <div class="sfield"><p class="sf-k">Learned</p><p class="sf-v">The right abstraction is leverage: write a test once, run it on every PLC.</p></div>
+        <div class="st-grid">
+          <div class="sfield sfield--problem"><p class="sf-k">Problem</p><p class="sf-v">Test knowledge lived in experts' heads; every PLC was tested from scratch.</p></div>
+          <div class="sfield sfield--built"><p class="sf-k">What I built</p><p class="sf-v">A component-based automation framework for PLC testing in a VC environment — abstract test cases populated with real control data.</p></div>
+          <div class="sfield sfield--tools"><p class="sf-k">Tools</p><div class="skills__tags"><span class="tag">UML</span><span class="tag">Asset Admin Shells</span><span class="tag">OPC UA</span><span class="tag">MBSE</span></div></div>
+        </div>
+        <div class="st-impact"><span class="imp-k">Impact</span><span class="imp-v">Working prototype proved feasibility and scalability — became the foundation of the patented product.</span></div>
+        <p class="st-learned">The right abstraction is leverage: write a test once, run it on every PLC.</p>
       </div>
     </div>
     <div class="station reveal">
-      <div class="station__head"><span class="station__num">STN 04</span><p class="station__role">Intern, Virtual Commissioning <span>· BMW</span></p><span class="station__dates">01/2024 — 07/2024</span><span class="station__chev">▸</span></div>
+      <div class="station__head"><svg class="st-badge" viewBox="0 0 30 30" aria-label="BMW"><circle cx="15" cy="15" r="13" fill="none" stroke="#8b95a1" stroke-width="1.6"/><path d="M15 4 A11 11 0 0 1 26 15 L15 15 Z" fill="#5b8fd6" opacity=".85"/><path d="M15 26 A11 11 0 0 1 4 15 L15 15 Z" fill="#5b8fd6" opacity=".85"/><path d="M26 15 A11 11 0 0 1 15 26 L15 15 Z" fill="#dfe6ec" opacity=".85"/><path d="M4 15 A11 11 0 0 1 15 4 L15 15 Z" fill="#dfe6ec" opacity=".85"/></svg><span class="station__num">STN 04</span><p class="station__role">Intern, Virtual Commissioning <span>· BMW</span></p><span class="station__dates">01/2024 — 07/2024</span><span class="station__chev">▸</span></div>
       <div class="station__body">
-        <div class="sfield"><p class="sf-k">Problem</p><p class="sf-v">Engineering data (PLC code vs control data) was inconsistent; testing progress was invisible.</p></div>
-        <div class="sfield"><p class="sf-k">What I built</p><p class="sf-v">A validation tool for code/data inconsistencies, a KPI monitoring system for test activities, and the digital lab network architecture.</p></div>
-        <div class="sfield"><p class="sf-k">Tools</p><p class="sf-v">C#, S7-1500, virtual robot controllers, simulation models</p></div>
-        <div class="sfield"><p class="sf-k">Impact</p><p class="sf-v">Reliable engineering data for simulation and commissioning; visibility into validation readiness.</p></div>
-        <div class="sfield"><p class="sf-v todo">Learned — [to fill in]</p></div>
+        <div class="st-grid">
+          <div class="sfield sfield--problem"><p class="sf-k">Problem</p><p class="sf-v">Engineering data (PLC code vs control data) was inconsistent; testing progress was invisible.</p></div>
+          <div class="sfield sfield--built"><p class="sf-k">What I built</p><p class="sf-v">A validation tool for code/data inconsistencies, a KPI monitoring system for test activities, and the digital lab network architecture.</p></div>
+          <div class="sfield sfield--tools"><p class="sf-k">Tools</p><div class="skills__tags"><span class="tag">C#</span><span class="tag">S7-1500</span><span class="tag">Virtual robots</span><span class="tag">Simulation models</span></div></div>
+        </div>
+        <div class="st-impact"><span class="imp-k">Impact</span><span class="imp-v">Reliable engineering data for simulation and commissioning; visibility into validation readiness.</span></div>
+        <p class="st-learned todo">[to fill in]</p>
       </div>
     </div>
     <div class="station reveal">
-      <div class="station__head"><span class="station__num">STN 03</span><p class="station__role">Research Assistant <span>· OVGU Magdeburg</span></p><span class="station__dates">03/2023 — 08/2023</span><span class="station__chev">▸</span></div>
+      <div class="station__head"><svg class="st-badge" viewBox="0 0 30 30" aria-label="OVGU"><rect x="2" y="2" width="26" height="26" fill="none" stroke="#8b95a1" stroke-width="1.4"/><rect x="2" y="2" width="26" height="8" fill="#c22f5e" opacity=".8"/><text x="15" y="23" fill="#c7ccd1" font-family="JetBrains Mono, monospace" font-size="9" text-anchor="middle" font-weight="bold">OvGU</text></svg><span class="station__num">STN 03</span><p class="station__role">Research Assistant <span>· OVGU Magdeburg</span></p><span class="station__dates">03/2023 — 08/2023</span><span class="station__chev">▸</span></div>
       <div class="station__body">
-        <div class="sfield"><p class="sf-k">Problem</p><p class="sf-v">The lab's miniature production line had no live digital counterpart for research and teaching.</p></div>
-        <div class="sfield"><p class="sf-k">What I built</p><p class="sf-v">A two-way digital twin in Tecnomatix Plant Simulation over OPC UA, plus a web KPI dashboard with dual-channel control.</p></div>
-        <div class="sfield"><p class="sf-k">Tools</p><p class="sf-v">Tecnomatix Plant Simulation, OPC UA, web dashboard</p></div>
-        <div class="sfield"><p class="sf-k">Impact</p><p class="sf-v">Real-time bidirectional control and monitoring — the demo at the top of this page.</p></div>
-        <div class="sfield"><p class="sf-k">Learned</p><p class="sf-v">Sync latency is the truth-teller of any digital twin.</p></div>
+        <div class="st-grid">
+          <div class="sfield sfield--problem"><p class="sf-k">Problem</p><p class="sf-v">The lab's miniature production line had no live digital counterpart for research and teaching.</p></div>
+          <div class="sfield sfield--built"><p class="sf-k">What I built</p><p class="sf-v">A two-way digital twin in Tecnomatix Plant Simulation over OPC UA, plus a web KPI dashboard with dual-channel control.</p></div>
+          <div class="sfield sfield--tools"><p class="sf-k">Tools</p><div class="skills__tags"><span class="tag">Tecnomatix</span><span class="tag">OPC UA</span><span class="tag">Web dashboard</span></div></div>
+        </div>
+        <div class="st-impact"><span class="imp-k">Impact</span><span class="imp-v">Real-time bidirectional control and monitoring — the demo at the top of this page.</span></div>
+        <p class="st-learned">Sync latency is the truth-teller of any digital twin.</p>
       </div>
     </div>
     <div class="station reveal">
-      <div class="station__head"><span class="station__num">STN 02</span><p class="station__role">Project Engineer <span>· HCL</span></p><span class="station__dates">12/2020 — 09/2022</span><span class="station__chev">▸</span></div>
+      <div class="station__head"><svg class="st-badge" viewBox="0 0 30 30" aria-label="HCL"><rect x="2" y="2" width="26" height="26" fill="none" stroke="#8b95a1" stroke-width="1.4"/><text x="15" y="19" fill="#5b8fd6" font-family="JetBrains Mono, monospace" font-size="9.5" text-anchor="middle" font-weight="bold">HCL</text></svg><span class="station__num">STN 02</span><p class="station__role">Project Engineer <span>· HCL</span></p><span class="station__dates">12/2020 — 09/2022</span><span class="station__chev">▸</span></div>
       <div class="station__body">
-        <div class="sfield"><p class="sf-k">Problem</p><p class="sf-v">Medical-device development demands controlled processes across engineering, quality and regulatory functions.</p></div>
-        <div class="sfield"><p class="sf-k">What I built</p><p class="sf-v">End-to-end change management, resource planning, and customer-specific Standard Operating Procedures.</p></div>
-        <div class="sfield"><p class="sf-k">Tools</p><p class="sf-v">Agile project management, controlled development processes</p></div>
-        <div class="sfield"><p class="sf-k">Impact</p><p class="sf-v">On-time, compliant delivery of engineering work packages.</p></div>
-        <div class="sfield"><p class="sf-k">Learned</p><p class="sf-v">Process discipline is what lets interdisciplinary teams scale.</p></div>
+        <div class="st-grid">
+          <div class="sfield sfield--problem"><p class="sf-k">Problem</p><p class="sf-v">Medical-device development demands controlled processes across engineering, quality and regulatory functions.</p></div>
+          <div class="sfield sfield--built"><p class="sf-k">What I built</p><p class="sf-v">End-to-end change management, resource planning, and customer-specific Standard Operating Procedures.</p></div>
+          <div class="sfield sfield--tools"><p class="sf-k">Tools</p><div class="skills__tags"><span class="tag">Agile PM</span><span class="tag">Controlled processes</span></div></div>
+        </div>
+        <div class="st-impact"><span class="imp-k">Impact</span><span class="imp-v">On-time, compliant delivery of engineering work packages.</span></div>
+        <p class="st-learned">Process discipline is what lets interdisciplinary teams scale.</p>
       </div>
     </div>
     <div class="station reveal">
-      <div class="station__head"><span class="station__num">STN 01</span><p class="station__role">Intern Engineer <span>· Coca-Cola</span></p><span class="station__dates">01/2020 — 06/2020</span><span class="station__chev">▸</span></div>
+      <div class="station__head"><svg class="st-badge" viewBox="0 0 30 30" aria-label="Coca-Cola"><circle cx="15" cy="15" r="13" fill="#a83232" opacity=".85"/><path d="M5 17 Q11 12 15 16 T25 15" stroke="#f4e9e0" stroke-width="2" fill="none" stroke-linecap="round"/></svg><span class="station__num">STN 01</span><p class="station__role">Intern Engineer <span>· Coca-Cola</span></p><span class="station__dates">01/2020 — 06/2020</span><span class="station__chev">▸</span></div>
       <div class="station__body">
-        <div class="sfield"><p class="sf-k">Problem</p><p class="sf-v">Truck turnaround time in the loading area was a plant-wide bottleneck.</p></div>
-        <div class="sfield"><p class="sf-k">What I built</p><p class="sf-v">Targeted logistics process improvements from bottleneck analysis in the loading area.</p></div>
-        <div class="sfield"><p class="sf-k">Tools</p><p class="sf-v">Bottleneck analysis, process mapping</p></div>
-        <div class="sfield"><p class="sf-k">Impact</p><p class="sf-v">−10% turnaround time across the entire plant.</p></div>
-        <div class="sfield"><p class="sf-k">Learned</p><p class="sf-v">Watch the floor, not the report.</p></div>
+        <div class="st-grid">
+          <div class="sfield sfield--problem"><p class="sf-k">Problem</p><p class="sf-v">Truck turnaround time in the loading area was a plant-wide bottleneck.</p></div>
+          <div class="sfield sfield--built"><p class="sf-k">What I built</p><p class="sf-v">Targeted logistics process improvements from bottleneck analysis in the loading area.</p></div>
+          <div class="sfield sfield--tools"><p class="sf-k">Tools</p><div class="skills__tags"><span class="tag">Bottleneck analysis</span><span class="tag">Process mapping</span></div></div>
+        </div>
+        <div class="st-impact"><span class="imp-k">Impact</span><span class="imp-v">−10% turnaround time across the entire plant.</span></div>
+        <p class="st-learned">Watch the floor, not the report.</p>
       </div>
     </div>
   </div>
@@ -970,6 +1013,7 @@
 </footer>
 
 <div id="toasts"></div>
+<div id="alerts"></div>
 <div id="stack-modal"><div class="sm-box">
 <span class="k">// RAW TECHNICAL STACK — you clicked 5 times, you earned this</span><br><br>
 { "frontend": "vanilla HTML/CSS/JS + Three.js r128",<br>
@@ -1025,7 +1069,7 @@ function toast(title,body,opts){
     });
     t.appendChild(a);
   }
-  document.getElementById('toasts').appendChild(t);
+  document.getElementById(opts.corner==='tr'?'alerts':'toasts').appendChild(t);
   if(!opts.sticky) setTimeout(()=>t.remove(),opts.ttl||6000);
 }
 // ===== MODE TOGGLE =====
@@ -1081,34 +1125,40 @@ document.querySelectorAll('.station__head').forEach(h=>{
     g.add(w,s);(parent||plant).add(g);return g;
   }
   const lerp=(a,b,k)=>a+(b-a)*k;
-  const ease=k=>k*k*(3-2*k);
+  const EASE={io:k=>k*k*(3-2*k),i:k=>k*k,o:k=>1-(1-k)*(1-k),lin:k=>k};
   function alerp(a,b,k){let d=b-a;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+=2*Math.PI;return a+d*k;}
 
-  // ---- floor & grid ----
   const grid=new THREE.GridHelper(32,64,0x2b6f64,0x18242e);
   grid.material.transparent=true;plant.add(grid);
   const floorMat=new THREE.MeshStandardMaterial({color:0x11161d,metalness:.15,roughness:.9,transparent:true,opacity:0});
   const floor=new THREE.Mesh(new THREE.PlaneGeometry(34,22),floorMat);
   floor.rotation.x=-Math.PI/2;floor.position.y=-.01;floor.receiveShadow=true;plant.add(floor);
 
-  // ---- roller conveyor (the line) ----
+  // ---- roller conveyor ----
   const BELT_Z=-0.6, BELT_TOP=1.06, BOXC=BELT_TOP+.21;
   (function(){
     const len=11.8;
     [-.5,.5].forEach(off=>{
       dual(new THREE.BoxGeometry(len,.2,.1),0x39434f).position.set(0,.96,BELT_Z+off);
     });
-    for(let i=0;i<24;i++){
-      const x=-5.75+i*.5;
-      const r=dual(new THREE.CylinderGeometry(.055,.055,.92,10),0x5e6a78,null,.8,.3);
+    for(let i=0;i<36;i++){
+      const x=-5.72+i*.327;
+      const r=dual(new THREE.CylinderGeometry(.05,.05,.92,10),0x5e6a78,null,.8,.3);
       r.rotation.x=Math.PI/2;r.position.set(x,BELT_TOP-.05,BELT_Z);
     }
     for(let i=0;i<6;i++){
       const x=-5.3+i*2.12;
-      const leg=dual(new THREE.BoxGeometry(.13,.9,.9),0x232c37);
-      leg.position.set(x,.45,BELT_Z);
+      dual(new THREE.BoxGeometry(.13,.9,.9),0x232c37).position.set(x,.45,BELT_Z);
       dual(new THREE.BoxGeometry(.3,.04,1.0),0x232c37).position.set(x,.02,BELT_Z);
     }
+  })();
+  const eyeMat=new THREE.MeshBasicMaterial({color:0xe24b4a,transparent:true,opacity:.15});
+  (function(){
+    [-.68,.68].forEach(z=>{
+      dual(new THREE.BoxGeometry(.06,.14,.06),0x2a3340).position.set(-1.2,BELT_TOP+.1,BELT_Z+z);
+    });
+    const beam=new THREE.Mesh(new THREE.BoxGeometry(.012,.012,1.3),eyeMat);
+    beam.position.set(-1.2,BELT_TOP+.1,BELT_Z);plant.add(beam);
   })();
 
   // ---- drill press ----
@@ -1120,32 +1170,30 @@ document.querySelectorAll('.station__head').forEach(h=>{
   dual(new THREE.BoxGeometry(1.7,.16,.16),0x39434f,press).position.set(0,2.3,-.75);
   dual(new THREE.BoxGeometry(1.7,.16,.16),0x39434f,press).position.set(0,2.3,.75);
   dual(new THREE.BoxGeometry(.16,.16,1.66),0x39434f,press).position.set(0,2.3,0);
-  // guide columns the head slides on
   [-.3,.3].forEach(x=>{
-    const gcl=dual(new THREE.CylinderGeometry(.035,.035,.95,8),0xc7ccd1,press,.85,.25);
-    gcl.position.set(x,1.9,0);
+    dual(new THREE.CylinderGeometry(.035,.035,.95,8),0xc7ccd1,press,.85,.25).position.set(x,1.9,0);
   });
-  const spindle=new THREE.Group();press.add(spindle);spindle.position.y=2.42;
-  dual(new THREE.BoxGeometry(.5,.34,.42),0x2a3340,spindle).position.y=.28;      // motor housing
-  dual(new THREE.CylinderGeometry(.16,.16,.5,12),0xc7ccd1,spindle,.85,.25);      // quill
-  dual(new THREE.CylinderGeometry(.05,.14,.16,10),0x39434f,spindle).position.y=-.32; // chuck
+  const spindle=new THREE.Group();press.add(spindle);spindle.position.y=2.5;
+  dual(new THREE.BoxGeometry(.5,.34,.42),0x2a3340,spindle).position.y=.28;
+  dual(new THREE.CylinderGeometry(.16,.16,.5,12),0xc7ccd1,spindle,.85,.25);
+  dual(new THREE.CylinderGeometry(.05,.14,.16,10),0x39434f,spindle).position.y=-.32;
   const bit=dual(new THREE.CylinderGeometry(.035,.02,.5,8),0xf2a63a,spindle);bit.position.y=-.62;
-  // small fixture plates beside the rollers under the press
   [-.62,.62].forEach(z=>{
     dual(new THREE.BoxGeometry(.9,.05,.14),0x2a3340,press).position.set(0,BELT_TOP-.02,z);
   });
-  // control cabinet
   (function(){
     const cab=new THREE.Group();plant.add(cab);cab.position.set(-1.5,0,-2.1);
     dual(new THREE.BoxGeometry(.62,1.15,.42),0x2a3340,cab).position.y=.58;
     dual(new THREE.BoxGeometry(.56,1.02,.02),0x39434f,cab).position.set(0,.58,.22);
     dual(new THREE.BoxGeometry(.02,.3,.03),0xc7ccd1,cab,.9,.2).position.set(.2,.58,.23);
-    const lampM=new THREE.MeshBasicMaterial({color:0x3ddc84,transparent:true,opacity:.9});
-    const lamp=new THREE.Mesh(new THREE.SphereGeometry(.025,8,8),lampM);
+    const eStop=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,.03,10),
+      new THREE.MeshBasicMaterial({color:0xe24b4a}));
+    eStop.rotation.x=Math.PI/2;eStop.position.set(-.18,.82,.24);cab.add(eStop);
+    const lamp=new THREE.Mesh(new THREE.SphereGeometry(.025,8,8),
+      new THREE.MeshBasicMaterial({color:0x3ddc84,transparent:true,opacity:.9}));
     lamp.position.set(-.18,1.0,.23);cab.add(lamp);
   })();
 
-  // ---- sparks (drill) ----
   const sparks=[],sparkG=new THREE.Group();plant.add(sparkG);
   for(let i=0;i<14;i++){
     const m=new THREE.Mesh(new THREE.BoxGeometry(.03,.03,.03),
@@ -1160,28 +1208,27 @@ document.querySelectorAll('.station__head').forEach(h=>{
     });
   }
 
-  // ---- pallet rack ----
+  // ---- pallet rack (pick slot on the FRONT edge, robots insert horizontally) ----
   const RACK_X=-8.7, RACK_Z=BELT_Z;
   const rack=new THREE.Group();plant.add(rack);rack.position.set(RACK_X,0,RACK_Z);
   [[-.5,-1],[-.5,1],[.5,-1],[.5,1]].forEach(([x,z])=>{
-    dual(new THREE.BoxGeometry(.1,2.5,.1),0x39434f,rack).position.set(x,1.25,z);
+    dual(new THREE.BoxGeometry(.1,2.85,.1),0x39434f,rack).position.set(x,1.42,z);
   });
-  // diagonal braces
   [[-.5,0,1],[.5,0,-1]].forEach(([x,,s])=>{
     const br=dual(new THREE.BoxGeometry(.05,2.15,.05),0x2f3a46,rack);
-    br.position.set(x,1.2,0);br.rotation.x=s*.75;
+    br.position.set(x,1.35,0);br.rotation.x=s*.75;
   });
-  [0.55,1.35,2.15].forEach(y=>{
+  [0.55,1.35,2.45].forEach(y=>{
     dual(new THREE.BoxGeometry(1.05,.08,2.05),0x2a3340,rack).position.y=y;
   });
-  [[0.55,-1.1],[0.55,0.4],[1.35,-1.15],[2.15,0.1]].forEach(([y,z])=>{
-    dual(new THREE.BoxGeometry(.42,.06,.5),0x6b5335,rack,.1,.85).position.set(0,y+.07,z); // pallet board
+  [[0.55,-1.1],[0.55,0.4],[1.35,-1.15],[2.45,0.1]].forEach(([y,z])=>{
+    dual(new THREE.BoxGeometry(.42,.06,.5),0x6b5335,rack,.1,.85).position.set(0,y+.07,z);
     dual(new THREE.BoxGeometry(.42,.4,.42),0xc7ccd1,rack).position.set(0,y+.3,z);
   });
-  const SLOT=new THREE.Vector3(RACK_X,1.6,RACK_Z);
-  dual(new THREE.BoxGeometry(.46,.06,.54),0x6b5335,rack,.1,.85).position.set(0,1.42,0); // board under active slot
+  dual(new THREE.BoxGeometry(.46,.06,.54),0x6b5335,rack,.1,.85).position.set(.35,1.42,0);
+  const SLOT=new THREE.Vector3(RACK_X+.35,1.65,RACK_Z);
+  const RACK_FRONT=new THREE.Vector3(-7.8,1.98,RACK_Z);
 
-  // ---- output pallet ----
   const PAL=new THREE.Vector3(7.7,0,1.7);
   (function(){
     const p=new THREE.Group();plant.add(p);p.position.set(PAL.x,0,PAL.z);
@@ -1189,62 +1236,76 @@ document.querySelectorAll('.station__head').forEach(h=>{
     [-.5,0,.5].forEach(x=>{dual(new THREE.BoxGeometry(.14,.12,1.25),0x5a4630,p,.1,.85).position.set(x,.06,0);});
   })();
 
-  // ---- IK robots (detailed 6-axis look; kinematics unchanged) ----
+  // ---- IK robots: single-plane 2-link arm + separately-driven gripper fingers ----
   const L1=1.35,L2=1.15,TIPLEN=.42,SH_Y=1.25;
   function makeRobot(x,z){
     const AMBER=0xd98a2b, DARK=0x2a3340, STEEL=0xc7ccd1;
     const root=new THREE.Group();plant.add(root);root.position.set(x,0,z);
-    dual(new THREE.CylinderGeometry(.62,.66,.1,16),DARK,root).position.y=.05;      // base plate
+    dual(new THREE.CylinderGeometry(.62,.66,.1,16),DARK,root).position.y=.05;
     for(let i=0;i<6;i++){
       const a=i/6*Math.PI*2;
       dual(new THREE.CylinderGeometry(.03,.03,.05,6),STEEL,root,.9,.2).position.set(Math.cos(a)*.55,.12,Math.sin(a)*.55);
     }
-    dual(new THREE.CylinderGeometry(.48,.56,.26,16),AMBER,root,.35,.5).position.y=.22; // pedestal
+    dual(new THREE.CylinderGeometry(.48,.56,.26,16),AMBER,root,.35,.5).position.y=.22;
     const yawG=new THREE.Group();root.add(yawG);yawG.position.y=.35;
-    dual(new THREE.CylinderGeometry(.4,.44,.32,16),AMBER,yawG,.35,.5).position.y=.16;  // carousel
-    dual(new THREE.BoxGeometry(.26,.28,.34),DARK,yawG).position.set(.34,.22,0);        // J1 motor
-    dual(new THREE.BoxGeometry(.42,.5,.46),AMBER,yawG,.35,.5).position.y=.58;          // column
-    const j2=dual(new THREE.CylinderGeometry(.22,.22,.52,14),DARK,yawG);               // J2 housing
+    dual(new THREE.CylinderGeometry(.4,.44,.32,16),AMBER,yawG,.35,.5).position.y=.16;
+    dual(new THREE.BoxGeometry(.26,.28,.34),DARK,yawG).position.set(.34,.22,0);
+    dual(new THREE.BoxGeometry(.42,.5,.46),AMBER,yawG,.35,.5).position.y=.58;
+    const j2=dual(new THREE.CylinderGeometry(.22,.22,.52,14),DARK,yawG);
     j2.rotation.x=Math.PI/2;j2.position.y=.9;
     const shG=new THREE.Group();yawG.add(shG);shG.position.y=.9;
-    [-0.16,0.16].forEach(zz=>{                                                          // upper arm plates
+    [-0.16,0.16].forEach(zz=>{
       dual(new THREE.BoxGeometry(.3,L1,.08),AMBER,shG,.35,.5).position.set(0,L1/2,zz);
     });
-    dual(new THREE.BoxGeometry(.22,L1*.72,.2),AMBER,shG,.35,.5).position.y=L1/2;        // core rib
-    dual(new THREE.BoxGeometry(.3,.34,.42),DARK,shG).position.set(.24,.12,0);           // counterweight
-    const dress=dual(new THREE.TorusGeometry(.3,.028,6,12,Math.PI*.9),0x1c242e,shG,.2,.8); // cable dress
+    dual(new THREE.BoxGeometry(.22,L1*.72,.2),AMBER,shG,.35,.5).position.y=L1/2;
+    dual(new THREE.BoxGeometry(.3,.34,.42),DARK,shG).position.set(.24,.12,0);
+    const dress=dual(new THREE.TorusGeometry(.3,.028,6,12,Math.PI*.9),0x1c242e,shG,.2,.8);
     dress.position.set(-.1,.25,0);dress.rotation.y=Math.PI/2;
-    const j3=dual(new THREE.CylinderGeometry(.17,.17,.44,12),DARK,shG);                 // J3 housing
+    const j3=dual(new THREE.CylinderGeometry(.17,.17,.44,12),DARK,shG);
     j3.rotation.x=Math.PI/2;j3.position.y=L1;
     const elG=new THREE.Group();shG.add(elG);elG.position.y=L1;
-    dual(new THREE.BoxGeometry(.22,L2*.62,.22),AMBER,elG,.35,.5).position.y=L2*.31;     // forearm lower
-    dual(new THREE.BoxGeometry(.17,L2*.46,.17),AMBER,elG,.35,.5).position.y=L2*.76;     // forearm taper
-    dual(new THREE.CylinderGeometry(.09,.09,.2,10),DARK,elG).position.set(.14,L2*.3,0); // J4 motor
+    dual(new THREE.BoxGeometry(.22,L2*.62,.22),AMBER,elG,.35,.5).position.y=L2*.31;
+    dual(new THREE.BoxGeometry(.17,L2*.46,.17),AMBER,elG,.35,.5).position.y=L2*.76;
+    dual(new THREE.CylinderGeometry(.09,.09,.2,10),DARK,elG).position.set(.14,L2*.3,0);
     const wrG=new THREE.Group();elG.add(wrG);wrG.position.y=L2;
-    const j5=dual(new THREE.CylinderGeometry(.11,.11,.28,12),DARK,wrG);                 // J5 housing
+    const j5=dual(new THREE.CylinderGeometry(.11,.11,.28,12),DARK,wrG);
     j5.rotation.x=Math.PI/2;
-    dual(new THREE.CylinderGeometry(.13,.13,.05,14),STEEL,wrG,.9,.2).position.y=.1;     // flange
-    dual(new THREE.BoxGeometry(.24,.1,.2),DARK,wrG).position.y=.17;                     // gripper body
-    [-0.09,0.09].forEach(xx=>{                                                          // fingers
-      dual(new THREE.BoxGeometry(.05,.2,.08),STEEL,wrG,.85,.25).position.set(xx,.31,0);
-      dual(new THREE.BoxGeometry(.06,.05,.09),0x1c242e,wrG,.2,.8).position.set(xx,.415,0);
-    });
-    const home={psi:Math.PI/2,a:.55,b:1.0,w:Math.PI-1.55};
-    const rb={base:new THREE.Vector3(x,0,z),home,pose:{...home},_from:null,_to:null};
+    dual(new THREE.CylinderGeometry(.13,.13,.05,14),STEEL,wrG,.9,.2).position.y=.1;
+    dual(new THREE.BoxGeometry(.72,.1,.2),DARK,wrG).position.y=.17;
+    // fingers are separate movable groups so the gripper can actually open/close
+    const fingerL=dual(new THREE.BoxGeometry(.05,.3,.09),STEEL,wrG,.85,.25);
+    dual(new THREE.BoxGeometry(.045,.06,.09),0x1c242e,fingerL,.2,.8).position.y=.12;
+    const fingerR=dual(new THREE.BoxGeometry(.05,.3,.09),STEEL,wrG,.85,.25);
+    dual(new THREE.BoxGeometry(.045,.06,.09),0x1c242e,fingerR,.2,.8).position.y=.12;
+    fingerL.position.y=.32;fingerR.position.y=.32;
+
+    const rb={
+      base:new THREE.Vector3(x,0,z),
+      yawG,shG,elG,wrG,
+      pose:{psi:0,a:.12,b:.12,w:Math.PI-.24},
+      grip:0, // 0 = open, 1 = closed
+      fingerL,fingerR,
+      _from:null,_to:null,_fromPsi:0,_toPsi:0
+    };
     rb.apply=function(){
       yawG.rotation.y=rb.pose.psi;
       shG.rotation.z=rb.pose.a;
       elG.rotation.z=rb.pose.b;
       wrG.rotation.z=rb.pose.w;
+      const spread=lerp(.34,.235,rb.grip); // open -> just-clear-the-part closed width
+      fingerL.position.x=-spread;fingerR.position.x=spread;
     };
     rb.apply();
     return rb;
   }
-  function ik(base,t){
-    const dx=t.x-base.x,dz=t.z-base.z;
+  // Solve the 2-link arm ONCE for a static Cartesian target -> a fixed, reusable joint pose.
+  // This is the only place inverse kinematics runs; every animated move afterwards blends
+  // between these known-good, pre-solved poses -- never a live per-frame IK solve.
+  function solvePose(base,target){
+    const dx=target.x-base.x,dz=target.z-base.z;
     const psi=Math.atan2(dz,-dx);
     const r=Math.hypot(dx,dz);
-    const h=t.y-SH_Y;
+    const h=target.y-SH_Y;
     let d=Math.hypot(r,h);d=Math.min(d,L1+L2-.01);
     const theta=Math.atan2(r,h);
     const delta=Math.acos(Math.max(-1,Math.min(1,(L1*L1+d*d-L2*L2)/(2*L1*d))));
@@ -1252,17 +1313,23 @@ document.querySelectorAll('.station__head').forEach(h=>{
     const b=Math.atan2(r-L1*Math.sin(a),h-L1*Math.cos(a))-a;
     return {psi,a,b,w:Math.PI-a-b};
   }
-  function tipOf(rb){
-    const p=rb.pose;
+  function tipFromPose(base,pose){
+    const p=pose;
     const hx=-Math.cos(p.psi),hz=Math.sin(p.psi);
     const r=L1*Math.sin(p.a)+L2*Math.sin(p.a+p.b)+TIPLEN*Math.sin(p.a+p.b+p.w);
     const y=SH_Y+L1*Math.cos(p.a)+L2*Math.cos(p.a+p.b)+TIPLEN*Math.cos(p.a+p.b+p.w);
-    return new THREE.Vector3(rb.base.x+r*hx,y,rb.base.z+r*hz);
+    return new THREE.Vector3(base.x+r*hx,y,base.z+r*hz);
   }
+  // A small, high, close-to-base "elbows-in" shape used for every rotate/transit stage.
+  // At this shape the arm's reach is only ~0.43m from its own base column -- far short of
+  // the nearest neighbouring structure (rack front, conveyor edge) -- so swinging the base
+  // around while holding this shape cannot sweep into anything else in the cell.
+  const CA=0.7, CB=-1.56; // upper arm forward ~40°, forearm folded back ~89° relative to it
+  const COMPACT={a:CA,b:CB,w:Math.PI-CA-CB};
+
   const armA=makeRobot(-7.0,BELT_Z);
   const armB=makeRobot(6.9,0.35);
-
-  // ---- gantry crane ----
+  // ---- gantry crane (hook parks HIGH: never meets a robot) ----
   [[-8.4,-4.7],[-8.4,4.7],[8.4,-4.7],[8.4,4.7]].forEach(([x,z])=>{
     dual(new THREE.BoxGeometry(.22,3.7,.22),0x39434f).position.set(x,1.85,z);
     dual(new THREE.BoxGeometry(.4,.05,.4),0x232c37).position.set(x,.025,z);
@@ -1271,45 +1338,50 @@ document.querySelectorAll('.station__head').forEach(h=>{
   dual(new THREE.BoxGeometry(17.2,.2,.26),0x39434f).position.set(0,3.7,4.7);
   const bridge=new THREE.Group();plant.add(bridge);
   dual(new THREE.BoxGeometry(.3,.26,9.7),0x5e6a78,bridge).position.y=3.95;
-  [-4.72,4.72].forEach(z=>{                                                    // end trucks
+  [-4.72,4.72].forEach(z=>{
     dual(new THREE.BoxGeometry(.6,.22,.4),0xf2a63a,bridge,.35,.5).position.set(0,3.82,z);
   });
   const trolley=new THREE.Group();bridge.add(trolley);
   dual(new THREE.BoxGeometry(.6,.3,.55),0xf2a63a,trolley,.35,.5).position.y=3.74;
-  [[-.24,-.2],[-.24,.2],[.24,-.2],[.24,.2]].forEach(([x,z])=>{                 // trolley wheels
+  const drum=dual(new THREE.CylinderGeometry(.08,.08,.3,10),0x1c242e,trolley,.2,.8);
+  drum.rotation.x=Math.PI/2;drum.position.set(.2,3.92,0);
+  [[-.24,-.2],[-.24,.2],[.24,-.2],[.24,.2]].forEach(([x,z])=>{
     const wh=dual(new THREE.CylinderGeometry(.07,.07,.05,10),0x1c242e,trolley,.2,.8);
     wh.rotation.x=Math.PI/2;wh.position.set(x,3.98,z);
   });
   const cable=dual(new THREE.CylinderGeometry(.022,.022,1,6),0xc7ccd1,trolley,.85,.25);
   const hookG=new THREE.Group();trolley.add(hookG);
-  dual(new THREE.BoxGeometry(.2,.12,.2),0x2a3340,hookG).position.y=.06;        // hook block
+  dual(new THREE.BoxGeometry(.2,.12,.2),0x2a3340,hookG).position.y=.06;
   const hookArc=dual(new THREE.TorusGeometry(.09,.028,8,12,Math.PI*1.4),0xc7ccd1,hookG,.85,.25);
   hookArc.position.y=-.07;hookArc.rotation.z=Math.PI*.8;
-  const gantry={x:3.0,z:-2.2,drop:1.1};
+  const gantry={x:3.0,z:-2.2,drop:.7};
+  let lastDrop=.7;
   function applyGantry(){
     bridge.position.x=gantry.x;
     trolley.position.z=gantry.z;
     cable.scale.y=gantry.drop;
     cable.position.y=3.6-gantry.drop/2;
     hookG.position.y=3.6-gantry.drop;
+    drum.rotation.z+=(gantry.drop-lastDrop)*8;
+    lastDrop=gantry.drop;
   }
   applyGantry();
   const hookPoint=()=>new THREE.Vector3(gantry.x,3.6-gantry.drop,gantry.z);
 
   // ---- AGV ----
   const agv=new THREE.Group();plant.add(agv);
-  dual(new THREE.BoxGeometry(1.2,.2,.75),0x39434f,agv).position.y=.19;                 // chassis
-  dual(new THREE.BoxGeometry(1.06,.08,.62),0x2a3340,agv).position.y=.33;               // deck
-  [[.61,0,.04,.66],[-.61,0,.04,.66],[0,.385,1.22,.04]].forEach(([x,z,lx,lz])=>{        // bumpers
+  dual(new THREE.BoxGeometry(1.2,.2,.75),0x39434f,agv).position.y=.19;
+  dual(new THREE.BoxGeometry(1.06,.08,.62),0x2a3340,agv).position.y=.33;
+  [[.61,0,.04,.66],[-.61,0,.04,.66],[0,.385,1.22,.04]].forEach(([x,z,lx,lz])=>{
     dual(new THREE.BoxGeometry(lx,.06,lz),0xf2a63a,agv,.3,.6).position.set(x,.14,z);
   });
-  [[-.42,-.32],[-.42,.32],[.42,-.32],[.42,.32]].forEach(([x,z])=>{                     // wheels
+  [[-.42,-.32],[-.42,.32],[.42,-.32],[.42,.32]].forEach(([x,z])=>{
     const wh=dual(new THREE.CylinderGeometry(.095,.095,.07,12),0x1c242e,agv,.2,.85);
     wh.rotation.x=Math.PI/2;wh.position.set(x,.095,z);
   });
-  const lid=dual(new THREE.CylinderGeometry(.05,.06,.09,10),0x1c242e,agv,.2,.7);       // lidar
+  const lid=dual(new THREE.CylinderGeometry(.05,.06,.09,10),0x1c242e,agv,.2,.7);
   lid.position.set(.52,.42,0);
-  for(let i=0;i<4;i++){                                                                 // roller deck
+  for(let i=0;i<4;i++){
     const r=dual(new THREE.CylinderGeometry(.03,.03,.56,8),0x5e6a78,agv,.8,.3);
     r.rotation.x=Math.PI/2;r.position.set(-.33+i*.22,.4,0);
   }
@@ -1322,23 +1394,22 @@ document.querySelectorAll('.station__head').forEach(h=>{
     hl.position.set(.61,.2,z);agv.add(hl);
   });
   const AGV_WAIT=new THREE.Vector3(-6.2,0,3.4);
+  const AGV_P1=new THREE.Vector3(-8.0,0,3.4), AGV_P2=new THREE.Vector3(-8.0,0,0.9);
   agv.position.copy(AGV_WAIT);
   function agvDrive(from,to,k){
     agv.position.lerpVectors(from,to,k);
     const dx=to.x-from.x,dz=to.z-from.z;
     if(Math.hypot(dx,dz)>.01)agv.rotation.y=Math.atan2(-dz,dx);
   }
-  // floor path markings for the AGV
   (function(){
     const mk=(x,z,lx,lz)=>{
       const m=new THREE.Mesh(new THREE.BoxGeometry(lx,.012,lz),
         new THREE.MeshBasicMaterial({color:0xf2a63a,transparent:true,opacity:.28}));
       m.position.set(x,.012,z);plant.add(m);
     };
-    mk(-7.45,3.4,2.7,.06); mk(-8.7,2.3,.06,2.4);
+    mk(-7.1,3.4,1.9,.06); mk(-8.0,2.15,.06,2.55);
   })();
 
-  // ---- stack light ----
   (function(){
     dual(new THREE.BoxGeometry(.16,.06,.16),0x232c37).position.set(1.9,.03,-1.9);
     dual(new THREE.CylinderGeometry(.045,.045,1.05,8),0x39434f).position.set(1.9,.55,-1.9);
@@ -1351,12 +1422,33 @@ document.querySelectorAll('.station__head').forEach(h=>{
   });
   let lightState=2;
 
-  // ---- scan plane (virtual only) ----
   const scanMat=new THREE.MeshBasicMaterial({color:0x5ee6d0,transparent:true,opacity:.07,side:THREE.DoubleSide,depthWrite:false});
   const scan=new THREE.Mesh(new THREE.PlaneGeometry(12,4.6),scanMat);
   scan.rotation.y=Math.PI/2;scan.position.y=2.3;plant.add(scan);
 
-  // ---- the part (with drilled hole) ----
+  const hover=(v,dy)=>new THREE.Vector3(v.x,v.y+dy,v.z);
+  const SLOT_TOP=new THREE.Vector3(SLOT.x,SLOT.y+.21,SLOT.z);
+  const BELT_START=new THREE.Vector3(-5.4,BOXC,BELT_Z);
+  const BELT_START_TOP=hover(BELT_START,.21);
+  const BELT_END=new THREE.Vector3(5.6,BOXC,BELT_Z);
+  const BELT_END_TOP=hover(BELT_END,.21);
+  const PAL_BOX=new THREE.Vector3(PAL.x,.38,PAL.z);
+  const PAL_BOX_TOP=hover(PAL_BOX,.21);
+  const AGV_PICK_TOP=new THREE.Vector3(AGV_P2.x,.58,AGV_P2.z); // fixed: AGV always parks at AGV_P2 for this pick; .58 = deck top (.37) + half part height
+
+  // ---- one-time IK solves (teach-pendant style: solved once, replayed forever) ----
+  const poseRackFront=solvePose(armA.base,RACK_FRONT);
+  const poseRackGrip =solvePose(armA.base,SLOT_TOP);
+  const poseBeltStart=solvePose(armA.base,BELT_START_TOP);
+  const poseAgvPick  =solvePose(armA.base,AGV_PICK_TOP);
+  const poseBeltEnd  =solvePose(armB.base,BELT_END_TOP);
+  const posePalletDrop=solvePose(armB.base,PAL_BOX_TOP);
+
+  // start each robot already tucked in its compact shape, facing its first job
+  armA.pose={psi:poseRackFront.psi,...COMPACT};armA.apply();
+  armB.pose={psi:poseBeltEnd.psi,...COMPACT};armB.apply();
+
+  // ---- the part, and a uniform "whoever holds it, holds it" attachment model ----
   const part=dual(new THREE.BoxGeometry(.42,.4,.42),0xf2a63a,null,.4,.5);
   part.position.copy(SLOT);
   const partWireM=part.children[0].material, partSolidM=part.children[1].material;
@@ -1371,104 +1463,159 @@ document.querySelectorAll('.station__head').forEach(h=>{
     partWireM.color.set(on?0x3ddc84:0x5ee6d0);
     hole.visible=on;
   }
-  let carrier=null;
+  let carrier=null; // null = resting/free on a static surface or the conveyor; else 'A'|'B'|'hook'|'agv'
+  // Reparent while preserving WORLD transform -- the part never jumps, and from this
+  // point on it moves exactly as its new parent's real transform moves it: no manual
+  // per-frame position math, so it cannot ever mismatch the visible mesh it's riding on.
+  const _wp=new THREE.Vector3(),_wq=new THREE.Quaternion(),_ws=new THREE.Vector3(),_pq=new THREE.Quaternion();
+  function reparent(obj,newParent,fixedLocalPos){
+    obj.updateMatrixWorld(true);
+    obj.matrixWorld.decompose(_wp,_wq,_ws);
+    newParent.add(obj);
+    newParent.updateMatrixWorld(true);
+    if(fixedLocalPos){
+      // known-good grasp point in the holder's own frame: guaranteed correct nesting
+      obj.position.copy(fixedLocalPos);
+      obj.quaternion.set(0,0,0,1); // rides rigidly with the holder from here on
+      return;
+    }
+    const inv=new THREE.Matrix4().copy(newParent.matrixWorld).invert();
+    const localPos=_wp.clone().applyMatrix4(inv);
+    newParent.matrixWorld.decompose(new THREE.Vector3(),_pq,new THREE.Vector3());
+    const localQuat=_pq.clone().invert().multiply(_wq);
+    obj.position.copy(localPos);
+    obj.quaternion.copy(localQuat);
+  }
+  // Verified local grasp points, measured directly from each holder's own mesh geometry:
+  const GRASP_GRIPPER=new THREE.Vector3(0,.44,0);  // between the finger pads
+  const GRASP_HOOK=new THREE.Vector3(0,-.32,0);    // hanging just below the hook arc
+  const GRASP_AGV=new THREE.Vector3(0,.58,0);      // resting flush on the deck top
+  function restOnPlant(worldPos){
+    reparent(part,plant);
+    part.position.copy(worldPos);
+    part.quaternion.set(0,0,0,1);
+  }
 
-  // ---- sequence engine (unchanged choreography) ----
+  // ---- sequence engine ----
   const seq=[];let stage='INIT';
-  function step(d,fn,onStart,label){seq.push({d,fn,onStart,label});}
-  function armStep(rb,d,tipTarget,label){
+  function step(d,fn,onStart,label,mode){seq.push({d,fn,onStart,label,mode:mode||'io'});}
+
+  // REACH: shoulder/elbow/wrist only (arm stays in the same fixed vertical plane --
+  // a true straight 2-link extension/retraction, base yaw untouched).
+  function reach(rb,d,targetPose,label,mode){
     step(d,k=>{
       const p=rb._from,q=rb._to;
-      rb.pose={psi:alerp(p.psi,q.psi,k),a:lerp(p.a,q.a,k),b:lerp(p.b,q.b,k),w:lerp(p.w,q.w,k)};
+      rb.pose.a=lerp(p.a,q.a,k);rb.pose.b=lerp(p.b,q.b,k);rb.pose.w=lerp(p.w,q.w,k);
       rb.apply();
-    },()=>{
-      rb._from={...rb.pose};
-      rb._to=tipTarget?ik(rb.base,tipTarget()):{...rb.home};
-    },label);
+    },()=>{rb._from={...rb.pose};rb._to=targetPose;},label,mode);
   }
-  const hover=(v,dy)=>new THREE.Vector3(v.x,v.y+dy,v.z);
-  const SLOT_TOP=new THREE.Vector3(SLOT.x,SLOT.y+.21,SLOT.z);
-  const BELT_START=new THREE.Vector3(-5.4,BOXC,BELT_Z);
-  const BELT_START_TOP=hover(BELT_START,.21);
-  const BELT_END=new THREE.Vector3(5.6,BOXC,BELT_Z);
-  const BELT_END_TOP=hover(BELT_END,.21);
-  const PAL_BOX=new THREE.Vector3(PAL.x,.42,PAL.z);
-  const PAL_BOX_TOP=hover(PAL_BOX,.21);
+  // ROTATE: base yaw only (shoulder/elbow/wrist frozen at whatever compact shape they're
+  // already holding, so the swing radius stays small the whole time).
+  function rotate(rb,d,targetPsi,label,mode){
+    step(d,k=>{
+      rb.pose.psi=alerp(rb._fromPsi,rb._toPsi,k);
+      rb.apply();
+    },()=>{rb._fromPsi=rb.pose.psi;rb._toPsi=targetPsi;},label,mode);
+  }
+  // GRIP: closes the fingers over a short window (no arm motion).
+  function gripClose(rb,d,label){
+    step(d,k=>{rb.grip=k;rb.apply();},()=>{},label);
+  }
+  function gripOpen(rb,d,label){
+    step(d,k=>{rb.grip=1-k;rb.apply();},()=>{},label);
+  }
 
-  armStep(armA,1.0,()=>hover(SLOT_TOP,.35),'PICK · RACK');
-  armStep(armA,0.5,()=>SLOT_TOP,'PICK · RACK');
-  step(.25,null,()=>{carrier='A';},'PICK · RACK');
-  armStep(armA,0.5,()=>hover(SLOT_TOP,.45),'TRANSFER · TO LINE');
-  armStep(armA,1.35,()=>hover(BELT_START_TOP,.5),'TRANSFER · TO LINE');
-  armStep(armA,0.55,()=>BELT_START_TOP,'TRANSFER · TO LINE');
-  step(.25,null,()=>{carrier=null;part.position.copy(BELT_START);},'TRANSFER · TO LINE');
-  step(2.3,k=>{
-    part.position.x=lerp(BELT_START.x,.3,k);
-    const k2=Math.min(k*2.2,1);
-    const p=armA._from,q=armA._to;
-    armA.pose={psi:alerp(p.psi,q.psi,k2),a:lerp(p.a,q.a,k2),b:lerp(p.b,q.b,k2),w:lerp(p.w,q.w,k2)};
-    armA.apply();
-  },()=>{armA._from={...armA.pose};armA._to={...armA.home};},'CONVEY · TO PRESS');
-  step(.45,k=>{spindle.position.y=lerp(2.42,2.16,k);},()=>{lightState=1;},'DRILL · PLUNGE');
+  const AT=(a,b)=>Math.abs(a-b)<1e-4;
+
+  // ================= ROBOT A: rack <-> line <-> AGV =================
+  reach(armA,0.85,poseRackFront,'APPROACH · RACK');
+  reach(armA,0.6,poseRackGrip,'INSERT · RACK');
+  gripClose(armA,0.28,'GRIP · PART');
+  step(.05,null,()=>{
+    reparent(part,armA.wrG,GRASP_GRIPPER);carrier='A';
+    SND.tick();
+  },'GRIP · PART');
+  reach(armA,0.6,{...COMPACT,psi:poseRackFront.psi},'RETRACT · RACK');
+  rotate(armA,1.1,poseBeltStart.psi,'ROTATE · TO LINE');
+  reach(armA,0.75,poseBeltStart,'APPROACH · LINE');
+  gripOpen(armA,0.25,'RELEASE · LINE');
+  step(.05,null,()=>{
+    restOnPlant(BELT_START);carrier=null;
+    SND.thunk();
+  },'RELEASE · LINE');
+  reach(armA,0.6,{...COMPACT,psi:poseBeltStart.psi},'RETRACT · LINE');
+  rotate(armA,1.1,poseAgvPick.psi,'ROTATE · STANDBY');
+  // (waits here in a safe compact shape, facing the AGV spot, until the AGV actually arrives)
+
+  // conveyor + drill + robot B + gantry + AGV run while armA idles compact above --
+  // fully sequential globally, so nothing else moves while armA's own stages run, and
+  // armA's idle compact shape never overlaps anything else's path (see COMPACT comment).
+  step(2.3,k=>{part.position.x=lerp(BELT_START.x,.3,k);},()=>{},'CONVEY · TO PRESS');
+  step(.45,k=>{spindle.position.y=lerp(2.5,2.3,k);},()=>{lightState=1;},'DRILL · PLUNGE');
   step(.9,null,()=>{burstSparks();},'DRILL · CYCLE');
-  step(.45,k=>{spindle.position.y=lerp(2.16,2.42,k);},()=>{setProcessed(true);},'DRILL · RETRACT');
+  step(.45,k=>{spindle.position.y=lerp(2.3,2.5,k);},()=>{setProcessed(true);},'DRILL · RETRACT');
   step(2.2,k=>{part.position.x=lerp(.3,BELT_END.x,k);},()=>{lightState=2;},'CONVEY · TO PICKUP');
-  armStep(armB,0.9,()=>hover(BELT_END_TOP,.4),'PICK · LINE END');
-  armStep(armB,0.5,()=>BELT_END_TOP,'PICK · LINE END');
-  step(.25,null,()=>{carrier='B';},'PICK · LINE END');
-  armStep(armB,0.5,()=>hover(BELT_END_TOP,.5),'PLACE · PALLET');
-  armStep(armB,1.2,()=>hover(PAL_BOX_TOP,.55),'PLACE · PALLET');
-  armStep(armB,0.6,()=>PAL_BOX_TOP,'PLACE · PALLET');
-  step(.25,null,()=>{carrier=null;part.position.copy(PAL_BOX);},'PLACE · PALLET');
-  step(1.6,k=>{
-    gantry.x=lerp(gantry._x0,PAL.x,k);gantry.z=lerp(gantry._z0,PAL.z,k);applyGantry();
-    const k2=Math.min(k*1.8,1);
-    const p=armB._from,q=armB._to;
-    armB.pose={psi:alerp(p.psi,q.psi,k2),a:lerp(p.a,q.a,k2),b:lerp(p.b,q.b,k2),w:lerp(p.w,q.w,k2)};
-    armB.apply();
-  },()=>{gantry._x0=gantry.x;gantry._z0=gantry.z;armB._from={...armB.pose};armB._to={...armB.home};},'CRANE · APPROACH');
-  step(.8,k=>{gantry.drop=lerp(1.1,2.88,k);applyGantry();},null,'CRANE · LOWER');
-  step(.2,null,()=>{carrier='hook';},'CRANE · GRIP');
-  step(.8,k=>{gantry.drop=lerp(2.88,1.1,k);applyGantry();},null,'CRANE · HOIST');
-  step(2.2,k=>{gantry.x=lerp(PAL.x,AGV_WAIT.x,k);gantry.z=lerp(PAL.z,AGV_WAIT.z,k);applyGantry();},null,'CRANE · TRAVERSE');
-  step(.8,k=>{gantry.drop=lerp(1.1,2.64,k);applyGantry();},null,'CRANE · LOWER');
-  step(.2,null,()=>{carrier='agv';},'HANDOFF · TO AGV');
-  step(.6,k=>{gantry.drop=lerp(2.64,1.1,k);applyGantry();},null,'HANDOFF · TO AGV');
-  const AGV_P1=new THREE.Vector3(-8.7,0,3.4), AGV_P2=new THREE.Vector3(-8.7,0,1.2);
-  step(2.2,k=>{
+
+  // ================= ROBOT B: line end -> pallet =================
+  reach(armB,0.75,poseBeltEnd,'APPROACH · LINE END');
+  gripClose(armB,0.28,'GRIP · PART');
+  step(.05,null,()=>{reparent(part,armB.wrG,GRASP_GRIPPER);carrier='B';SND.tick();},'GRIP · PART');
+  reach(armB,0.6,{...COMPACT,psi:poseBeltEnd.psi},'RETRACT · LINE END');
+  rotate(armB,1.1,posePalletDrop.psi,'ROTATE · TO PALLET');
+  reach(armB,0.8,posePalletDrop,'APPROACH · PALLET');
+  gripOpen(armB,0.25,'RELEASE · PALLET');
+  step(.05,null,()=>{restOnPlant(PAL_BOX);carrier=null;SND.thunk();},'RELEASE · PALLET');
+  reach(armB,0.6,{...COMPACT,psi:posePalletDrop.psi},'RETRACT · PALLET');
+  rotate(armB,1.1,poseBeltEnd.psi,'ROTATE · STANDBY');
+
+  // ================= GANTRY: pallet -> AGV =================
+  step(1.4,k=>{gantry.x=lerp(gantry._x0,PAL.x,k);gantry.z=lerp(gantry._z0,PAL.z,k);applyGantry();},
+    ()=>{gantry._x0=gantry.x;gantry._z0=gantry.z;},'CRANE · APPROACH');
+  step(.9,k=>{gantry.drop=lerp(.7,2.85,k);applyGantry();},null,'CRANE · LOWER');
+  step(.2,null,()=>{reparent(part,hookG,GRASP_HOOK);carrier='hook';SND.tick();},'CRANE · GRIP');
+  step(.9,k=>{gantry.drop=lerp(2.85,.7,k);applyGantry();},null,'CRANE · HOIST');
+  step(2.3,k=>{gantry.x=lerp(PAL.x,AGV_WAIT.x,k);gantry.z=lerp(PAL.z,AGV_WAIT.z,k);applyGantry();},null,'CRANE · TRAVERSE');
+  step(.85,k=>{gantry.drop=lerp(.7,2.58,k);applyGantry();},null,'CRANE · LOWER');
+  step(.2,null,()=>{
+    // hand off directly onto the AGV bed -- part becomes a child of the AGV itself,
+    // so it rides the vehicle exactly, with zero manual tracking, from here on.
+    reparent(part,agv,GRASP_AGV);carrier='agv';SND.thunk();
+  },'HANDOFF · TO AGV');
+  step(.6,k=>{gantry.drop=lerp(2.58,.7,k);applyGantry();},null,'HANDOFF · TO AGV');
+
+  // ================= AGV: waits -> drives to the rack side =================
+  step(2.0,k=>{
     agvDrive(AGV_WAIT,AGV_P1,k);
     gantry.x=lerp(AGV_WAIT.x,3.0,k);gantry.z=lerp(AGV_WAIT.z,-2.2,k);applyGantry();
   },null,'AGV · RETURN RUN');
   step(1.5,k=>{agvDrive(AGV_P1,AGV_P2,k);},null,'AGV · RETURN RUN');
-  step(1.0,k=>{
-    const from=agvTop(), mid=new THREE.Vector3(lerp(from.x,SLOT.x,.5),2.3,lerp(from.z,SLOT.z,.5));
-    const a=new THREE.Vector3().lerpVectors(from,mid,k), b=new THREE.Vector3().lerpVectors(mid,SLOT,k);
-    part.position.lerpVectors(a,b,k);
-  },()=>{carrier=null;},'RESTOCK · RACK');
-  step(.2,null,()=>{part.position.copy(SLOT);setProcessed(false);},'RESTOCK · RACK');
-  step(1.5,k=>{agvDrive(AGV_P2,AGV_P1,k);},null,'AGV · TO STANDBY');
-  step(2.0,k=>{agvDrive(AGV_P1,AGV_WAIT,k);},null,'AGV · TO STANDBY');
+
+  // ================= ROBOT A: unload AGV, restock rack =================
+  reach(armA,0.75,poseAgvPick,'APPROACH · AGV');
+  gripClose(armA,0.28,'GRIP · PART');
+  step(.05,null,()=>{reparent(part,armA.wrG,GRASP_GRIPPER);carrier='A';SND.tick();},'GRIP · PART');
+  reach(armA,0.6,{...COMPACT,psi:poseAgvPick.psi},'RETRACT · AGV');
+  rotate(armA,1.1,poseRackFront.psi,'ROTATE · TO RACK');
+  reach(armA,0.6,poseRackFront,'APPROACH · RACK');
+  reach(armA,0.55,poseRackGrip,'INSERT · RACK');
+  gripOpen(armA,0.25,'RESTOCK · RACK');
+  step(.05,null,()=>{restOnPlant(SLOT);setProcessed(false);carrier=null;SND.thunk();},'RESTOCK · RACK');
+  reach(armA,0.6,poseRackFront,'RETRACT · RACK');
+  step(1.2,k=>{agvDrive(AGV_P2,AGV_P1,k);},null,'AGV · TO STANDBY');
+  step(1.8,k=>{agvDrive(AGV_P1,AGV_WAIT,k);},null,'AGV · TO STANDBY');
   step(.8,null,()=>{},'CYCLE · COMPLETE');
 
-  function agvTop(){return new THREE.Vector3(agv.position.x,.65,agv.position.z);}
   let si=0,stime=0,started=false;
   function runSeq(dt){
     const s=seq[si];
     if(!started){s.onStart&&s.onStart();started=true;stage=s.label||stage;}
     stime+=dt;
-    const k=ease(Math.min(stime/s.d,1));
+    const k=EASE[s.mode](Math.min(stime/s.d,1));
     s.fn&&s.fn(k);
     if(stime>=s.d){si=(si+1)%seq.length;stime=0;started=false;}
   }
-  function glue(){
-    if(carrier==='A'){const t=tipOf(armA);part.position.set(t.x,t.y-.21,t.z);}
-    else if(carrier==='B'){const t=tipOf(armB);part.position.set(t.x,t.y-.21,t.z);}
-    else if(carrier==='hook'){const h=hookPoint();part.position.set(h.x,h.y-.31,h.z);}
-    else if(carrier==='agv'){part.position.copy(agvTop());}
-  }
-
-  // ---- interaction: rotate + zoom ----
-  let dragging=false,px0=0,py0=0,autoRot=true;
+  // ---- interaction: rotate + zoom + fullscreen ----
+  let dragging=false,px0=0,py0=0,autoRot=true,fsActive=false;
   let camDist=13.2,camDistT=13.2;
   const ZMIN=5.2,ZMAX=18;
   hero.addEventListener('mousedown',e=>{dragging=true;px0=e.clientX;py0=e.clientY;autoRot=false;});
@@ -1495,41 +1642,101 @@ document.querySelectorAll('.station__head').forEach(h=>{
     }
   },{passive:true});
   hero.addEventListener('wheel',e=>{
-    if(e.deltaY>0&&camDistT>=ZMAX-.01)return; // fully zoomed out -> let the page scroll
+    if(e.deltaY>0&&camDistT>=ZMAX-.01&&!fsActive)return;
     e.preventDefault();
     camDistT=Math.max(ZMIN,Math.min(ZMAX,camDistT*(1+e.deltaY*.0012)));
   },{passive:false});
   hero.addEventListener('dblclick',()=>{camDistT=camDistT>9?6.4:13.2;});
-  // ---- sound (hero only, default muted) ----
+  // fullscreen
+  const fsBtn=document.getElementById('fs-toggle');
+  const fsExit=document.getElementById('fs-exit');
+  function setFs(on){
+    fsActive=on;
+    document.body.classList.toggle('hero-fs',on);
+    if(fsExit)fsExit.style.display=on?'inline-block':'none';
+    setTimeout(()=>window.dispatchEvent(new Event('resize')),80);
+  }
+  if(fsBtn)fsBtn.addEventListener('click',e=>{
+    e.stopPropagation();
+    if(hero.requestFullscreen)hero.requestFullscreen().catch(()=>{});
+    setFs(true);
+  });
+  if(fsExit)fsExit.addEventListener('click',()=>{
+    if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});
+    setFs(false);
+  });
+  document.addEventListener('fullscreenchange',()=>{
+    if(!document.fullscreenElement&&fsActive)setFs(false);
+  });
+
+  // ---- sound: quiet, physical, with contact transients and a synthesized room ----
   let audio=null,muted=true,beepPhase=0;
+  const SND={tick(){if(audio)audio.tick();},thunk(){if(audio)audio.thunk();}};
   function createAudio(){
     const AC=window.AudioContext||window.webkitAudioContext;
     const ctx=new AC();
-    const master=ctx.createGain();master.gain.value=0;master.connect(ctx.destination);
+    const comp=ctx.createDynamicsCompressor();
+    comp.threshold.value=-28;comp.ratio.value=6;comp.connect(ctx.destination);
+    const soften=ctx.createBiquadFilter();soften.type='lowpass';soften.frequency.value=3600;
+    soften.connect(comp);
+    const master=ctx.createGain();master.gain.value=0;master.connect(soften);
+    // synthesized room: short decaying-noise impulse into a convolver send
+    const ir=ctx.createBuffer(2,ctx.sampleRate*.45,ctx.sampleRate);
+    for(let ch=0;ch<2;ch++){
+      const d=ir.getChannelData(ch);
+      for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,2.4)*.5;
+    }
+    const conv=ctx.createConvolver();conv.buffer=ir;
+    const send=ctx.createGain();send.gain.value=.16;
+    master.connect(send);send.connect(conv);conv.connect(soften);
     const nb=ctx.createBuffer(1,ctx.sampleRate*2,ctx.sampleRate);
     const nd=nb.getChannelData(0);
-    for(let i=0;i<nd.length;i++)nd[i]=Math.random()*2-1;
+    let l=0;
+    for(let i=0;i<nd.length;i++){l=(l+(Math.random()*2-1)*.25)*.94;nd[i]=l*3;}
     const mkNoise=()=>{const s=ctx.createBufferSource();s.buffer=nb;s.loop=true;s.start();return s;};
     const mkOsc=(type,f)=>{const o=ctx.createOscillator();o.type=type;o.frequency.value=f;o.start();return o;};
     const mkGain=v=>{const g=ctx.createGain();g.gain.value=v;g.connect(master);return g;};
     const v={};
-    // conveyor: low rumble
     v.conv=mkGain(0);
-    {const f=ctx.createBiquadFilter();f.type='lowpass';f.frequency.value=230;mkNoise().connect(f);f.connect(v.conv);}
-    // drill: motor + grind
-    v.drill=mkGain(0);mkOsc('sawtooth',96).connect(v.drill);
-    v.grind=mkGain(0);
-    {const f=ctx.createBiquadFilter();f.type='bandpass';f.frequency.value=2600;f.Q.value=2.5;mkNoise().connect(f);f.connect(v.grind);}
-    // robot servos
+    {const f=ctx.createBiquadFilter();f.type='lowpass';f.frequency.value=170;mkNoise().connect(f);f.connect(v.conv);
+     const lfo=mkOsc('sine',2.1),lg=ctx.createGain();lg.gain.value=.1;lfo.connect(lg);lg.connect(v.conv.gain);}
     v.robot=mkGain(0);
-    {const f=ctx.createBiquadFilter();f.type='bandpass';f.frequency.value=900;f.Q.value=3;
-     v.robotOsc=mkOsc('sawtooth',230);v.robotOsc.connect(f);f.connect(v.robot);}
-    // gantry: slow beat hum
-    v.gantry=mkGain(0);mkOsc('triangle',56).connect(v.gantry);mkOsc('triangle',59).connect(v.gantry);
-    // agv: electric hum + reverse beeper
-    v.agv=mkGain(0);mkOsc('triangle',132).connect(v.agv);
-    v.beep=mkGain(0);mkOsc('square',880).connect(v.beep);
-    return {ctx,master,v};
+    {const f=ctx.createBiquadFilter();f.type='lowpass';f.frequency.value=1050;
+     v.servo1=mkOsc('triangle',150);v.servo2=mkOsc('triangle',151.7);
+     v.servo1.connect(f);v.servo2.connect(f);f.connect(v.robot);}
+    v.drill=mkGain(0);
+    {const f=ctx.createBiquadFilter();f.type='lowpass';f.frequency.value=560;
+     v.dr1=mkOsc('triangle',82);v.dr2=mkOsc('triangle',164);
+     v.dr1.connect(f);v.dr2.connect(f);f.connect(v.drill);}
+    v.grind=mkGain(0);
+    {const f=ctx.createBiquadFilter();f.type='bandpass';f.frequency.value=1400;f.Q.value=.9;
+     mkNoise().connect(f);f.connect(v.grind);}
+    v.gantry=mkGain(0);
+    {const f=ctx.createBiquadFilter();f.type='lowpass';f.frequency.value=280;
+     mkOsc('sine',46).connect(f);mkOsc('sine',48.5).connect(f);f.connect(v.gantry);}
+    v.agv=mkGain(0);
+    {const f=ctx.createBiquadFilter();f.type='lowpass';f.frequency.value=480;
+     mkOsc('triangle',108).connect(f);f.connect(v.agv);}
+    v.beep=mkGain(0);mkOsc('sine',932).connect(v.beep);
+    function transient(filterType,freq,q,peak,dur){
+      const s=ctx.createBufferSource();s.buffer=nb;
+      const f=ctx.createBiquadFilter();f.type=filterType;f.frequency.value=freq;f.Q.value=q;
+      const g=ctx.createGain();
+      const t0=ctx.currentTime;
+      g.gain.setValueAtTime(0,t0);
+      g.gain.linearRampToValueAtTime(peak,t0+.012);
+      g.gain.exponentialRampToValueAtTime(.0001,t0+dur);
+      s.connect(f);f.connect(g);g.connect(master);
+      s.start(t0);s.stop(t0+dur+.05);
+    }
+    return {ctx,master,v,
+      thunk(){transient('lowpass',260,1,.5,.22);
+        const o=ctx.createOscillator();o.frequency.value=84;
+        const g=ctx.createGain();const t0=ctx.currentTime;
+        g.gain.setValueAtTime(.18,t0);g.gain.exponentialRampToValueAtTime(.0001,t0+.14);
+        o.connect(g);g.connect(master);o.start(t0);o.stop(t0+.16);},
+      tick(){transient('bandpass',2300,3,.22,.07);}
+    };
   }
   const sndBtn=document.getElementById('sound-toggle');
   if(sndBtn)sndBtn.addEventListener('click',()=>{
@@ -1539,23 +1746,43 @@ document.querySelectorAll('.station__head').forEach(h=>{
     sndBtn.textContent=muted?'SOUND: OFF':'SOUND: ON';
     sndBtn.classList.toggle('is-on',!muted);
   });
+  const prevA={...armA.pose},prevB={...armB.pose};
+  const prevG={x:gantry.x,z:gantry.z,drop:gantry.drop};
+  const prevAgv=agv.position.clone();
+  let prevPartX=part.position.x;
   function updateAudio(dt){
+    const dA=Math.abs(armA.pose.a-prevA.a)+Math.abs(armA.pose.b-prevA.b)+Math.abs(armA.pose.psi-prevA.psi);
+    const dB=Math.abs(armB.pose.a-prevB.a)+Math.abs(armB.pose.b-prevB.b)+Math.abs(armB.pose.psi-prevB.psi);
+    const armSpd=(dA+dB)/Math.max(dt,.001);
+    const ganSpd=(Math.abs(gantry.x-prevG.x)+Math.abs(gantry.z-prevG.z)+Math.abs(gantry.drop-prevG.drop))/Math.max(dt,.001);
+    const agvSpd=agv.position.distanceTo(prevAgv)/Math.max(dt,.001);
+    const partSpd=carrier?0:Math.abs(part.position.x-prevPartX)/Math.max(dt,.001);
+    Object.assign(prevA,armA.pose);Object.assign(prevB,armB.pose);
+    prevG.x=gantry.x;prevG.z=gantry.z;prevG.drop=gantry.drop;
+    prevAgv.copy(agv.position);prevPartX=part.position.x;
     if(!audio)return;
     const v=audio.v;
-    const tg={conv:0,drill:0,grind:0,robot:0,gantry:0,agv:0};
-    if(stage.startsWith('CONVEY')){tg.conv=.5;tg.robot=.08;}
-    if(stage==='DRILL · PLUNGE'||stage==='DRILL · RETRACT')tg.drill=.16;
-    if(stage==='DRILL · CYCLE'){tg.drill=.3;tg.grind=.22;}
-    if(stage.startsWith('PICK')||stage.startsWith('TRANSFER')||stage.startsWith('PLACE'))tg.robot=.26;
-    if(stage.startsWith('CRANE')||stage.startsWith('HANDOFF'))tg.gantry=.34;
-    if(stage.startsWith('AGV')){tg.agv=.3;}
-    ['conv','drill','grind','robot','gantry','agv'].forEach(k=>{
-      v[k].gain.value+=(tg[k]-v[k].gain.value)*.08;
+    const tg={
+      conv:Math.min(.28,partSpd*.13),
+      robot:Math.min(.18,armSpd*.15),
+      drill:stage==='DRILL · CYCLE'?.18:(stage.startsWith('DRILL')?.09:0),
+      grind:stage==='DRILL · CYCLE'?.07:0,
+      gantry:Math.min(.28,ganSpd*.1),
+      agv:Math.min(.2,agvSpd*.1)
+    };
+    ['conv','robot','drill','grind','gantry','agv'].forEach(k=>{
+      v[k].gain.value+=(tg[k]-v[k].gain.value)*(tg[k]>v[k].gain.value?.045:.02);
     });
-    v.robotOsc.frequency.value=230+Math.sin(t*11)*26+Math.sin(t*2.7)*14;
+    const sf=140+Math.min(armSpd,1.6)*95;
+    v.servo1.frequency.value+=(sf-v.servo1.frequency.value)*.06;
+    v.servo2.frequency.value=v.servo1.frequency.value*1.012;
+    const drf=stage==='DRILL · CYCLE'?96:(stage.startsWith('DRILL')?72:82);
+    v.dr1.frequency.value+=(drf-v.dr1.frequency.value)*.05;
+    v.dr2.frequency.value=v.dr1.frequency.value*2;
     beepPhase+=dt;
-    v.beep.gain.value=(stage.startsWith('AGV')&&beepPhase%0.8<0.09)?.09:0;
-    audio.master.gain.value+=((muted?0:.55)-audio.master.gain.value)*.06;
+    const beeping=stage.startsWith('AGV')&&agvSpd>.2&&(beepPhase%0.9)<0.12;
+    v.beep.gain.value+=((beeping?.03:0)-v.beep.gain.value)*.25;
+    audio.master.gain.value+=((muted?0:.36)-audio.master.gain.value)*.04;
   }
 
   // ---- animate ----
@@ -1575,8 +1802,8 @@ document.querySelectorAll('.station__head').forEach(h=>{
     sun.intensity=.85*mix;
 
     runSeq(dt);
-    glue();
     bit.rotation.y+=dt*(stage.startsWith('DRILL')?36:4);
+    eyeMat.opacity=Math.abs(part.position.x+1.2)<.35&&!carrier?.9:.15;
     sparks.forEach(s=>{
       if(s.life>0){
         s.life-=dt;
@@ -1589,7 +1816,7 @@ document.querySelectorAll('.station__head').forEach(h=>{
     slMats.forEach((m,i)=>m.opacity=i===lightState?.95:.15);
     scan.position.x=Math.sin(t*.32)*7.4;
     updateAudio(dt);
-    if(autoRot&&!dragging)plant.rotation.y+=dt*.07;
+    if(autoRot&&!dragging&&!fsActive)plant.rotation.y+=dt*.07;
     camDist+=(camDistT-camDist)*.06;
     camera.position.set(0,camDist*.44,camDist);
     camera.lookAt(0,.7,0);
@@ -1599,7 +1826,7 @@ document.querySelectorAll('.station__head').forEach(h=>{
   requestAnimationFrame(anim);
   window.addEventListener('resize',()=>{
     W=hero.clientWidth;H=hero.clientHeight;
-    plant.position.x=innerWidth<920?0:1.2;
+    plant.position.x=(innerWidth<920||fsActive)?0:1.2;
     camera.aspect=W/H;camera.updateProjectionMatrix();renderer.setSize(W,H);
   });
 })();
@@ -1633,17 +1860,18 @@ document.querySelectorAll('.station__head').forEach(h=>{
     for(let i=0;i<4;i++){
       S(g,'rect',Object.assign({x:ox+i*95,y:190,width:88,height:12},st,virt?{}:{fill:'#2a3340'}));
     }
+    const stX=[20,123,226,335];
     ['A','B','C','D'].forEach((n,i)=>{
-      S(g,'text',{x:ox+18+i*105,y:222,fill:'#8b95a1','font-family':'JetBrains Mono, monospace','font-size':9,'text-anchor':'middle'}).textContent=n;
+      S(g,'text',{x:ox+stX[i],y:222,fill:'#8b95a1','font-family':'JetBrains Mono, monospace','font-size':9,'text-anchor':'middle'}).textContent=n;
     });
     S(g,'rect',Object.assign({x:ox+104,y:140,width:8,height:50},st,virt?{}:{fill:'#39434f'}));
     S(g,'rect',Object.assign({x:ox+134,y:140,width:8,height:50},st,virt?{}:{fill:'#39434f'}));
     const beam=S(g,'line',{x1:ox+112,y1:178,x2:ox+134,y2:178,stroke:'#e24b4a','stroke-width':1.5,opacity:.25});
     S(g,'rect',Object.assign({x:ox+206,y:96,width:8,height:94},st,virt?{}:{fill:'#39434f'}));
-    S(g,'rect',Object.assign({x:ox+206,y:96,width:44,height:8},st,virt?{}:{fill:'#39434f'}));
+    S(g,'rect',Object.assign({x:ox+206,y:96,width:40,height:8},st,virt?{}:{fill:'#39434f'}));
     const drill=document.createElementNS(NS,'g');g.appendChild(drill);
-    S(drill,'rect',Object.assign({x:ox+218,y:106,width:10,height:26},acc));
-    S(drill,'path',{d:'M'+(ox+218)+' 132 L'+(ox+228)+' 132 L'+(ox+223)+' 144 Z',fill:virt?'none':'#f2a63a',stroke:virt?'#5ee6d0':'none','stroke-width':1.2});
+    S(drill,'rect',Object.assign({x:ox+221,y:106,width:10,height:26},acc));
+    S(drill,'path',{d:'M'+(ox+221)+' 132 L'+(ox+231)+' 132 L'+(ox+226)+' 144 Z',fill:virt?'none':'#f2a63a',stroke:virt?'#5ee6d0':'none','stroke-width':1.2});
     const prod=document.createElementNS(NS,'g');g.appendChild(prod);
     S(prod,'rect',Object.assign({x:ox+8,y:168,width:24,height:20},acc));
     const mark=S(prod,'circle',{cx:ox+20,cy:178,r:2.5,fill:virt?'#5ee6d0':'#0d1117',opacity:0});
@@ -1661,7 +1889,7 @@ document.querySelectorAll('.station__head').forEach(h=>{
     ok:0, rej:0, vel:0
   };
   let fwdHeld=false, backHeld=false;
-  const POS_B=100, POS_C=205, POS_END=340, PX_MAX=348;
+  const POS_B=103, POS_C=206, POS_END=340, PX_MAX=348;
   const speed=()=>0.85*(st.fast?2.1:1);
 
   function render(){
@@ -2217,7 +2445,7 @@ function runViz6(){
 // 3. fake alarm after 45s
 setTimeout(()=>{
   Eggs.mark('alarm');
-  toast('⚠ ALARM A-041','MANUAL TESTING OVERLOAD DETECTED. Recommended remedy?',{alarm:true,sticky:true,actions:[
+  toast('⚠ ALARM A-041','MANUAL TESTING OVERLOAD DETECTED. Recommended remedy?',{alarm:true,sticky:true,corner:'tr',actions:[
     ['ACKNOWLEDGE',()=>toast('A-041','Acknowledged. The overload persists. There is another way…')],
     ['AUTOMATE IT',()=>toast('A-041 · RESOLVED','Correct answer. This is exactly why the test suite exists.')]
   ]});
@@ -2331,8 +2559,10 @@ function worldDots(W,H,step){
   const R=2;
   let W=holder.clientWidth,H=460;
   const scene=new THREE.Scene();
-  const camera=new THREE.PerspectiveCamera(38,W/H,.1,50);
-  camera.position.set(0,0.5,5.9);camera.lookAt(0,0,0);
+  const camera=new THREE.PerspectiveCamera(38,W/H,.1,60);
+  let dist=5.9,distT=5.9;
+  const DMIN=3.3,DMAX=9.5;
+  camera.position.set(0,0.5,dist);camera.lookAt(0,0,0);
   const renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true});
   renderer.setSize(W,H);renderer.setPixelRatio(Math.min(devicePixelRatio,2));
   const globe=new THREE.Group();scene.add(globe);
@@ -2341,75 +2571,102 @@ function worldDots(W,H,step){
     const ph=lat*Math.PI/180, la=lon*Math.PI/180;
     return new THREE.Vector3(r*Math.cos(ph)*Math.cos(la), r*Math.sin(ph), -r*Math.cos(ph)*Math.sin(la));
   }
-  // occluder sphere
-  globe.add(new THREE.Mesh(new THREE.SphereGeometry(R*.985,48,32),
-    new THREE.MeshBasicMaterial({color:0x10151c})));
-  // faint wire sphere
-  globe.add(new THREE.Mesh(new THREE.SphereGeometry(R*1.001,36,24),
-    new THREE.MeshBasicMaterial({color:0x5ee6d0,wireframe:true,transparent:true,opacity:.035})));
-  // continent dots
-  (function(){
-    const {dots}=worldDots(1000,430,6);
-    const pos=new Float32Array(dots.length*3);
-    dots.forEach(([x,y],i)=>{
-      const lon=x/1000*360-180, lat=85-y/430*145;
-      const v=toVec(lat,lon,R);
-      pos[i*3]=v.x;pos[i*3+1]=v.y;pos[i*3+2]=v.z;
+
+  // ---- solid land texture drawn from continent polygons (smoothed) ----
+  const tex=(function(){
+    const TW=2048,TH=1024;
+    const c=document.createElement('canvas');c.width=TW;c.height=TH;
+    const x=c.getContext('2d');
+    x.fillStyle='#10151c';x.fillRect(0,0,TW,TH);
+    // graticule
+    x.strokeStyle='rgba(94,230,208,0.05)';x.lineWidth=1.5;
+    for(let lo=-150;lo<=150;lo+=30){const px=(lo+180)/360*TW;x.beginPath();x.moveTo(px,0);x.lineTo(px,TH);x.stroke();}
+    for(let la=-60;la<=60;la+=30){const py=(90-la)/180*TH;x.beginPath();x.moveTo(0,py);x.lineTo(TW,py);x.stroke();}
+    const P=(lon,lat)=>[(lon+180)/360*TW,(90-lat)/180*TH];
+    x.fillStyle='#3d4f61';
+    x.strokeStyle='#4d6278';x.lineWidth=2;
+    WORLD_POLYS.forEach(poly=>{
+      const pts=poly.slice(0,-1).map(([lon,lat])=>P(lon,lat));
+      const n=pts.length;
+      const mid=(a,b)=>[(a[0]+b[0])/2,(a[1]+b[1])/2];
+      x.beginPath();
+      let m=mid(pts[n-1],pts[0]);
+      x.moveTo(m[0],m[1]);
+      for(let i=0;i<n;i++){
+        const nm=mid(pts[i],pts[(i+1)%n]);
+        x.quadraticCurveTo(pts[i][0],pts[i][1],nm[0],nm[1]);
+      }
+      x.closePath();x.fill();x.stroke();
     });
-    const g=new THREE.BufferGeometry();
-    g.setAttribute('position',new THREE.BufferAttribute(pos,3));
-    globe.add(new THREE.Points(g,new THREE.PointsMaterial({color:0x51667c,size:.028})));
+    // islands
+    WORLD_EXTRAS.forEach(([lon,lat])=>{
+      const [px,py]=P(lon,lat);
+      x.beginPath();x.arc(px,py,7,0,Math.PI*2);x.fill();
+    });
+    const t=new THREE.CanvasTexture(c);
+    t.anisotropy=4;
+    return t;
   })();
-  // sites
+  globe.add(new THREE.Mesh(new THREE.SphereGeometry(R,64,48),
+    new THREE.MeshBasicMaterial({map:tex})));
+  globe.add(new THREE.Mesh(new THREE.SphereGeometry(R*1.002,36,24),
+    new THREE.MeshBasicMaterial({color:0x5ee6d0,wireframe:true,transparent:true,opacity:.03})));
+
+  // ---- sites (Munich = home base) ----
   const SITES=[
-    {n:'SPARTANBURG · USA',lat:34.9,lon:-81.9},
-    {n:'DEBRECEN · HU',lat:47.5,lon:21.6},
-    {n:'DINGOLFING · DE ★BASE',lat:48.6,lon:12.5,base:true},
-    {n:'SHENYANG · CN',lat:41.8,lon:123.4}
+    {n:'MUNICH · DE ★BASE',lat:48.14,lon:11.58,base:true,dlat:16,dlon:-30},
+    {n:'DINGOLFING · DE',lat:48.63,lon:12.47,dlat:-15,dlon:9},
+    {n:'DEBRECEN · HU',lat:47.5,lon:21.6,dlat:9,dlon:24},
+    {n:'SPARTANBURG · USA',lat:34.9,lon:-81.9,dlat:-13,dlon:0},
+    {n:'SHENYANG · CN',lat:41.8,lon:123.4,dlat:-13,dlon:9}
   ];
   function labelSprite(text,color){
     const c=document.createElement('canvas');c.width=512;c.height=64;
     const x=c.getContext('2d');
     x.font='26px "JetBrains Mono", monospace';x.fillStyle=color;
     x.textAlign='center';x.textBaseline='middle';
-    x.shadowColor='rgba(13,17,23,.9)';x.shadowBlur=8;
+    x.shadowColor='rgba(13,17,23,.95)';x.shadowBlur=9;
     x.fillText(text,256,32);
     const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthTest:false}));
-    sp.scale.set(1.7,.21,1);return sp;
+    sp.scale.set(1.6,.2,1);return sp;
   }
   const markers=[];
-  const homeV=toVec(SITES[2].lat,SITES[2].lon,R);
+  const homeV=toVec(SITES[0].lat,SITES[0].lon,R);
   SITES.forEach(s=>{
     const col=s.base?0xf2a63a:0x5ee6d0;
-    const colS=s.base?'#f2a63a':'#8b95a1';
+    const colS=s.base?'#f2a63a':'#aeb8c4';
     const v=toVec(s.lat,s.lon,R*1.005);
-    const dot=new THREE.Mesh(new THREE.SphereGeometry(.035,10,10),new THREE.MeshBasicMaterial({color:col}));
+    const dot=new THREE.Mesh(new THREE.SphereGeometry(s.base?.04:.032,10,10),new THREE.MeshBasicMaterial({color:col}));
     dot.position.copy(v);globe.add(dot);
     const halo=new THREE.Mesh(new THREE.SphereGeometry(.05,10,10),new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:.4}));
     halo.position.copy(v);globe.add(halo);
+    const anchor=toVec(s.lat+s.dlat*.55,s.lon+s.dlon*.55,R*1.12);
     const lab=labelSprite(s.n,colS);
-    lab.position.copy(toVec(s.lat,s.lon,R*1.16));
+    lab.position.copy(toVec(s.lat+s.dlat,s.lon+s.dlon,R*1.17));
     globe.add(lab);
-    markers.push({v,dot,halo,lab});
+    const lead=new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([v,anchor]),
+      new THREE.LineBasicMaterial({color:0x8b95a1,transparent:true,opacity:.5}));
+    globe.add(lead);
+    markers.push({dot,halo,lab,lead});
     if(!s.base){
       const pts=[];
       const a=homeV.clone().normalize(),b=v.clone().normalize();
       const ang=a.angleTo(b);
       for(let i=0;i<=40;i++){
-        const t=i/40;
-        const p=a.clone().lerp(b,t).normalize().multiplyScalar(R*(1+Math.sin(Math.PI*t)*(.05+.12*ang/Math.PI)));
-        pts.push(p);
+        const tt=i/40;
+        pts.push(a.clone().lerp(b,tt).normalize().multiplyScalar(R*(1+Math.sin(Math.PI*tt)*(.04+.13*ang/Math.PI))));
       }
-      const lg=new THREE.BufferGeometry().setFromPoints(pts);
-      const line=new THREE.Line(lg,new THREE.LineDashedMaterial({color:0x5ee6d0,transparent:true,opacity:.55,dashSize:.06,gapSize:.05}));
+      const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),
+        new THREE.LineDashedMaterial({color:0x5ee6d0,transparent:true,opacity:.55,dashSize:.06,gapSize:.05}));
       line.computeLineDistances();globe.add(line);
     }
   });
-  // orient Europe toward camera
-  globe.rotation.y=THREE.MathUtils.degToRad(-101.6+90);
+  globe.rotation.y=THREE.MathUtils.degToRad(-11.6);
   globe.rotation.x=.28;
 
-  let dragging=false,px0=0,py0=0,auto=true;
+  // ---- interaction: drag + zoom ----
+  let dragging=false,px0=0,py0=0,auto=true,pinch0=0;
   canvas.addEventListener('pointerdown',e=>{dragging=true;px0=e.clientX;py0=e.clientY;auto=false;});
   window.addEventListener('pointerup',()=>{dragging=false;setTimeout(()=>auto=true,4000);});
   window.addEventListener('pointermove',e=>{
@@ -2418,21 +2675,39 @@ function worldDots(W,H,step){
     globe.rotation.x=Math.max(-.9,Math.min(.9,globe.rotation.x+(e.clientY-py0)*.004));
     px0=e.clientX;py0=e.clientY;
   });
+  canvas.addEventListener('wheel',e=>{
+    if(e.deltaY>0&&distT>=DMAX-.01)return;
+    e.preventDefault();
+    distT=Math.max(DMIN,Math.min(DMAX,distT*(1+e.deltaY*.0013)));
+  },{passive:false});
+  canvas.addEventListener('touchstart',e=>{
+    if(e.touches.length===2)pinch0=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+  },{passive:true});
+  canvas.addEventListener('touchend',()=>{pinch0=0;},{passive:true});
+  canvas.addEventListener('touchmove',e=>{
+    if(e.touches.length===2&&pinch0>0){
+      const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+      distT=Math.max(DMIN,Math.min(DMAX,distT*pinch0/d));pinch0=d;
+    }
+  },{passive:true});
+  canvas.addEventListener('dblclick',()=>{distT=distT>4.5?3.6:5.9;});
 
   const wp=new THREE.Vector3();
   let t=0,last=performance.now();
   function anim(now){
     requestAnimationFrame(anim);
     const dt=Math.min((now-last)/1000,.05);last=now;t+=dt;
-    if(auto&&!dragging)globe.rotation.y+=dt*.12;
+    if(auto&&!dragging)globe.rotation.y+=dt*.1;
+    dist+=(distT-dist)*.08;
+    camera.position.set(0,dist*.085,dist);
+    camera.lookAt(0,0,0);
     const pulse=1+Math.sin(t*3)*.5;
     markers.forEach(m=>{
       m.halo.scale.setScalar(pulse);
       m.halo.material.opacity=.5-Math.sin(t*3)*.25;
       m.dot.getWorldPosition(wp);
-      const front=wp.z>0.4;
-      m.lab.visible=front;
-      m.halo.visible=front;
+      const front=wp.z>0.35;
+      m.lab.visible=front;m.halo.visible=front;m.lead.visible=front;
     });
     renderer.render(scene,camera);
   }
