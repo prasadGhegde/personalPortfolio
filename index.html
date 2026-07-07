@@ -1428,21 +1428,25 @@ document.querySelectorAll('.station__head').forEach(h=>{
 
   const hover=(v,dy)=>new THREE.Vector3(v.x,v.y+dy,v.z);
   const SLOT_TOP=new THREE.Vector3(SLOT.x,SLOT.y+.21,SLOT.z);
+  const RACK_PICK=hover(SLOT_TOP,.15); // pick only: extra clearance above the resting part's top face
   const BELT_START=new THREE.Vector3(-5.4,BOXC,BELT_Z);
   const BELT_START_TOP=hover(BELT_START,.21);
   const BELT_END=new THREE.Vector3(5.6,BOXC,BELT_Z);
   const BELT_END_TOP=hover(BELT_END,.21);
+  const BELT_END_PICK=hover(BELT_END_TOP,.15); // pick only: extra clearance above the part on the belt
   const PAL_BOX=new THREE.Vector3(PAL.x,.38,PAL.z);
   const PAL_BOX_TOP=hover(PAL_BOX,.21);
-  const AGV_PICK_TOP=new THREE.Vector3(AGV_P2.x,.58,AGV_P2.z); // fixed: AGV always parks at AGV_P2 for this pick; .58 = deck top (.37) + half part height
+  const AGV_REST_CENTER=new THREE.Vector3(AGV_P2.x,.58,AGV_P2.z); // where the part actually rests on the deck (.37 top + half part height)
+  const AGV_PICK_TOP=new THREE.Vector3(AGV_P2.x,.94,AGV_P2.z); // pick only: raised well above the resting part's top face (.79) for clearance
 
   // ---- one-time IK solves (teach-pendant style: solved once, replayed forever) ----
   const poseRackFront=solvePose(armA.base,RACK_FRONT);
-  const poseRackGrip =solvePose(armA.base,SLOT_TOP);
-  const poseBeltStart=solvePose(armA.base,BELT_START_TOP);
-  const poseAgvPick  =solvePose(armA.base,AGV_PICK_TOP);
-  const poseBeltEnd  =solvePose(armB.base,BELT_END_TOP);
-  const posePalletDrop=solvePose(armB.base,PAL_BOX_TOP);
+  const poseRackPick =solvePose(armA.base,RACK_PICK);   // extracting the resting part: approach from above, clear
+  const poseRackPlace=solvePose(armA.base,SLOT);        // restocking: part's own centre lands exactly at shelf height
+  const poseBeltStart=solvePose(armA.base,BELT_START);  // placing: belt's true resting centre, part sits flush
+  const poseAgvPick  =solvePose(armA.base,AGV_PICK_TOP);// picking off the AGV: raised, clear of the resting part
+  const poseBeltEnd  =solvePose(armB.base,BELT_END_PICK); // picking off the belt: raised, clear of the resting part
+  const posePalletDrop=solvePose(armB.base,PAL_BOX);    // placing: pallet's true resting centre, part sits flush
 
   // start each robot already tucked in its compact shape, facing its first job
   armA.pose={psi:poseRackFront.psi,...COMPACT};armA.apply();
@@ -1529,7 +1533,7 @@ document.querySelectorAll('.station__head').forEach(h=>{
 
   // ================= ROBOT A: rack <-> line <-> AGV =================
   reach(armA,0.85,poseRackFront,'APPROACH · RACK');
-  reach(armA,0.6,poseRackGrip,'INSERT · RACK');
+  reach(armA,0.6,poseRackPick,'INSERT · RACK');
   gripClose(armA,0.28,'GRIP · PART');
   step(.05,null,()=>{
     reparent(part,armA.wrG,GRASP_GRIPPER);carrier='A';
@@ -1597,7 +1601,7 @@ document.querySelectorAll('.station__head').forEach(h=>{
   reach(armA,0.6,{...COMPACT,psi:poseAgvPick.psi},'RETRACT · AGV');
   rotate(armA,1.1,poseRackFront.psi,'ROTATE · TO RACK');
   reach(armA,0.6,poseRackFront,'APPROACH · RACK');
-  reach(armA,0.55,poseRackGrip,'INSERT · RACK');
+  reach(armA,0.55,poseRackPlace,'INSERT · RACK');
   gripOpen(armA,0.25,'RESTOCK · RACK');
   step(.05,null,()=>{restOnPlant(SLOT);setProcessed(false);carrier=null;SND.thunk();},'RESTOCK · RACK');
   reach(armA,0.6,poseRackFront,'RETRACT · RACK');
