@@ -83,7 +83,8 @@
     background:rgba(13,17,23,.78); border:1px solid var(--panel-border); border-left:2px solid var(--accent);
     padding:1.1rem 1.3rem; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); }
   .hero__tagline .hl{ color:var(--text); font-weight:500; }
-  .hero-zoom{ position:absolute; right:8%; bottom:5.6rem; z-index:6; display:flex; flex-direction:column; gap:.4rem; }
+  .hero-zoom{ position:absolute; right:8%; bottom:5.6rem; z-index:6; display:none; flex-direction:column; gap:.4rem; }
+  body.hero-fs .hero-zoom{ display:flex; }
   .hero-zoom button{ min-width:34px; height:34px; padding:0 .7rem; font-family:var(--mono); font-size:.6rem; letter-spacing:.12em; color:var(--text-dim);
     background:rgba(13,17,23,.82); border:1px solid var(--panel-border); backdrop-filter:blur(6px); transition:color .2s, border-color .2s; }
   .hero-zoom button:hover{ color:var(--accent); border-color:var(--accent); }
@@ -217,13 +218,13 @@
   <span class="lbl-v">Virtual</span>
   <div class="sw"></div>
   <span class="lbl-p">Physical</span>
-  <span class="fs-btn" id="fs-toggle" title="Expand the live cell to fullscreen">⛶</span>
+  <span class="fs-btn" id="fs-toggle" title="Expand the live cell">⛶</span>
 </div>
 
 <section class="hero" id="hero">
   <canvas id="factory-canvas"></canvas>
   <div class="hud hud--tl" id="plc-status" style="pointer-events:auto;"><span class="dot"></span>SYS://FACTORY-TWIN · ONLINE · PORTFOLIO v1.1</div>
-  <div class="hud hud--bl">DRAG ROTATE · SCROLL / PINCH ZOOM · DBL-CLICK RESET</div>
+  <div class="hud hud--bl">DRAG TO ROTATE · EXPAND FOR ZOOM &amp; SOUND</div>
   <div class="hero-zoom"><button id="sound-toggle" aria-label="Toggle sound">SOUND: OFF</button></div>
   <div class="hud hud--br" id="hud-mode">MODE: VIRTUAL · MIX 0.00</div>
   <button class="fs-exit" id="fs-exit">✕ COLLAPSE</button>
@@ -429,7 +430,7 @@
   @media (max-width:980px){ .st-grid{ grid-template-columns:1fr; } }
   #mode-toggle .fs-btn{ margin-left:.5rem; padding-left:.7rem; border-left:1px solid var(--panel-border); color:var(--text-dim); font-size:.95rem; line-height:1; transition:color .2s; }
   #mode-toggle .fs-btn:hover{ color:var(--accent); }
-  .fs-exit{ display:none; position:absolute; top:1.3rem; right:1.6rem; z-index:9; font-family:var(--mono); font-size:.62rem; letter-spacing:.14em;
+  .fs-exit{ display:none; position:absolute; top:1.3rem; right:1.6rem; z-index:141; font-family:var(--mono); font-size:.62rem; letter-spacing:.14em;
     color:var(--text-dim); background:rgba(13,17,23,.85); border:1px solid var(--panel-border); padding:.55rem .9rem; backdrop-filter:blur(6px); }
   .fs-exit:hover{ color:var(--accent); border-color:var(--accent); }
   body.hero-fs{ overflow:hidden; }
@@ -1621,9 +1622,17 @@ document.querySelectorAll('.station__head').forEach(h=>{
   // ---- interaction: rotate + zoom + fullscreen ----
   let dragging=false,px0=0,py0=0,autoRot=true,fsActive=false;
   let camDist=13.2,camDistT=13.2;
-  const ZMIN=5.2,ZMAX=18;
-  hero.addEventListener('mousedown',e=>{dragging=true;px0=e.clientX;py0=e.clientY;autoRot=false;});
-  window.addEventListener('mouseup',()=>{dragging=false;setTimeout(()=>autoRot=true,4500);});
+  const ZMIN=5.2,ZMAX=18,DEFAULT_DIST=13.2;
+  // Any interaction pauses auto-rotate; rotation only resumes after 60s of no
+  // further interaction at all (each new interaction pushes the resume time out).
+  let resumeTimer=null;
+  function bumpInteraction(){
+    autoRot=false;
+    clearTimeout(resumeTimer);
+    resumeTimer=setTimeout(()=>{autoRot=true;},60000);
+  }
+  hero.addEventListener('mousedown',e=>{dragging=true;px0=e.clientX;py0=e.clientY;bumpInteraction();});
+  window.addEventListener('mouseup',()=>{dragging=false;bumpInteraction();});
   window.addEventListener('mousemove',e=>{
     if(!dragging)return;
     plant.rotation.y+=(e.clientX-px0)*.005;
@@ -1632,46 +1641,53 @@ document.querySelectorAll('.station__head').forEach(h=>{
   });
   let pinch0=0;
   hero.addEventListener('touchstart',e=>{
+    bumpInteraction();
     if(e.touches.length===2){pinch0=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);}
-    else{dragging=true;px0=e.touches[0].clientX;py0=e.touches[0].clientY;autoRot=false;}
+    else{dragging=true;px0=e.touches[0].clientX;py0=e.touches[0].clientY;}
   },{passive:true});
-  hero.addEventListener('touchend',()=>{dragging=false;pinch0=0;setTimeout(()=>autoRot=true,4500);});
+  hero.addEventListener('touchend',()=>{dragging=false;pinch0=0;bumpInteraction();});
   hero.addEventListener('touchmove',e=>{
     if(e.touches.length===2&&pinch0>0){
-      const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
-      camDistT=Math.max(ZMIN,Math.min(ZMAX,camDistT*pinch0/d));pinch0=d;
+      if(fsActive){ // pinch-zoom only available in the expanded view
+        const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+        camDistT=Math.max(ZMIN,Math.min(ZMAX,camDistT*pinch0/d));pinch0=d;
+        bumpInteraction();
+      }
     } else if(dragging){
       plant.rotation.y+=(e.touches[0].clientX-px0)*.005;
       px0=e.touches[0].clientX;py0=e.touches[0].clientY;
     }
   },{passive:true});
   hero.addEventListener('wheel',e=>{
-    if(e.deltaY>0&&camDistT>=ZMAX-.01&&!fsActive)return;
+    if(!fsActive)return; // zoom disabled on the default view -- let the page scroll normally
+    if(e.deltaY>0&&camDistT>=ZMAX-.01)return;
     e.preventDefault();
     camDistT=Math.max(ZMIN,Math.min(ZMAX,camDistT*(1+e.deltaY*.0012)));
+    bumpInteraction();
   },{passive:false});
-  hero.addEventListener('dblclick',()=>{camDistT=camDistT>9?6.4:13.2;});
-  // fullscreen
+  hero.addEventListener('dblclick',()=>{
+    if(!fsActive)return; // zoom disabled on the default view
+    camDistT=camDistT>9?6.4:DEFAULT_DIST;
+    bumpInteraction();
+  });
+  // Expand/collapse: CSS-only full-viewport overlay (not the browser's real Fullscreen
+  // API). Real Fullscreen stops the browser from rendering anything outside the
+  // fullscreen element -- including the custom cursor and the mode toggle, which live
+  // elsewhere in the page -- so this keeps everything visible and predictable instead.
   const fsBtn=document.getElementById('fs-toggle');
   const fsExit=document.getElementById('fs-exit');
   function setFs(on){
     fsActive=on;
     document.body.classList.toggle('hero-fs',on);
     if(fsExit)fsExit.style.display=on?'inline-block':'none';
+    if(fsBtn){fsBtn.textContent=on?'✕':'⛶';fsBtn.title=on?'Collapse back to normal view':'Expand the live cell';}
+    if(!on){camDistT=DEFAULT_DIST;} // never carry a fullscreen zoom level back into the default view
     setTimeout(()=>window.dispatchEvent(new Event('resize')),80);
   }
-  if(fsBtn)fsBtn.addEventListener('click',e=>{
-    e.stopPropagation();
-    if(hero.requestFullscreen)hero.requestFullscreen().catch(()=>{});
-    setFs(true);
-  });
-  if(fsExit)fsExit.addEventListener('click',()=>{
-    if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});
-    setFs(false);
-  });
-  document.addEventListener('fullscreenchange',()=>{
-    if(!document.fullscreenElement&&fsActive)setFs(false);
-  });
+  // one button, both directions -- click to expand, click again to collapse
+  if(fsBtn)fsBtn.addEventListener('click',e=>{e.stopPropagation();setFs(!fsActive);});
+  if(fsExit)fsExit.addEventListener('click',()=>setFs(false));
+  window.addEventListener('keydown',e=>{if(e.key==='Escape'&&fsActive)setFs(false);});
 
   // ---- sound: quiet, physical, with contact transients and a synthesized room ----
   let audio=null,muted=true,beepPhase=0;
@@ -2446,14 +2462,25 @@ function runViz6(){
     if(n>=5){n=0;Eggs.mark('stack');document.getElementById('stack-modal').classList.add('on');}
   });
 })();
-// 3. fake alarm after 45s
-setTimeout(()=>{
-  Eggs.mark('alarm');
-  toast('⚠ ALARM A-041','MANUAL TESTING OVERLOAD DETECTED. Recommended remedy?',{alarm:true,sticky:true,corner:'tr',actions:[
-    ['ACKNOWLEDGE',()=>toast('A-041','Acknowledged. The overload persists. There is another way…')],
-    ['AUTOMATE IT',()=>toast('A-041 · RESOLVED','Correct answer. This is exactly why the test suite exists.')]
-  ]});
-},45000);
+// 3. fake alarm -- fires once, only after 60s with NO interaction anywhere on the page
+//    (not a flat timer, and never re-fires once triggered)
+(function(){
+  let lastActivity=Date.now(), fired=false;
+  ['mousemove','mousedown','touchstart','keydown','wheel','scroll'].forEach(evt=>{
+    window.addEventListener(evt,()=>{lastActivity=Date.now();},{passive:true});
+  });
+  const iv=setInterval(()=>{
+    if(fired)return clearInterval(iv);
+    if(Date.now()-lastActivity>=60000){
+      fired=true;clearInterval(iv);
+      Eggs.mark('alarm');
+      toast('⚠ ALARM A-041','MANUAL TESTING OVERLOAD DETECTED. Recommended remedy?',{alarm:true,sticky:true,corner:'tr',actions:[
+        ['ACKNOWLEDGE',()=>toast('A-041','Acknowledged. The overload persists. There is another way…')],
+        ['AUTOMATE IT',()=>toast('A-041 · RESOLVED','Correct answer. This is exactly why the test suite exists.')]
+      ]});
+    }
+  },1000);
+})();
 // 4. generate test case
 const tcSubjects=['coffee_machine','office_door','elevator_02','vending_unit','meeting_room_light','engineer.motivation','deadline_buffer'];
 const tcActs=['extend','actuate','cycle','calibrate','interlock','ping'];
