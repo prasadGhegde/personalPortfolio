@@ -385,7 +385,9 @@
   .tabs{ display:flex; gap:.4rem; margin-bottom:1.1rem; }
   .tab-btn{ font-family:var(--mono); font-size:.6rem; letter-spacing:.12em; text-transform:uppercase; background:transparent; color:var(--text-dim); border:1px solid var(--panel-border); padding:.42rem .7rem; }
   .tab-btn.on{ border-color:var(--accent); color:var(--accent); }
-  .tab-pane{ display:none; }
+  .tab-stack{ display:grid; }
+  .tab-pane{ grid-area:1/1; opacity:0; visibility:hidden; pointer-events:none; align-self:start; transition:opacity .18s ease; }
+  .tab-pane.on{ opacity:1; visibility:visible; pointer-events:auto; }
   .tab-pane.on{ display:block; }
   .tab-pane .arch-k{ font-family:var(--mono); font-size:.62rem; letter-spacing:.1em; color:var(--accent); text-transform:uppercase; transition:color .3s; }
   .review-flag{ font-family:var(--mono); font-size:.6rem; color:#5f6b78; border:1px dashed #39434f; padding:.3rem .6rem; display:inline-block; margin-top:.4rem; }
@@ -470,8 +472,9 @@
     </div>
   </div>
   <details class="changelog-mini reveal">
-    <summary id="changelog-summary">// Portfolio changelog — v1.2</summary>
-    <span class="ver">v1.2<span class="cur">CURRENT</span></span> + real coastline data + lit 3D globe · + choreographed hero sequence · + one-row HMI panel · + career bridge layer (v1.5)<br>
+    <summary id="changelog-summary">// Portfolio changelog — v1.3</summary>
+    <span class="ver">v1.3<span class="cur">CURRENT</span></span> + all six projects reviewed &amp; approved · + corrected Project 02/04 wording · + GitHub linked · + institution added<br>
+    <span class="ver">v1.2</span> + real coastline data + lit 3D globe · + choreographed hero sequence · + one-row HMI panel · + career bridge layer (v1.5)<br>
     <span class="ver">v1.1</span> + AI assistant mockup · + validation simulator · + field deployment map · + hidden easter eggs<br>
     <span class="ver">v1.0</span> + digital validation dashboard · + PLC comparison demo · + VC case study · + live digital twin, 3D plant
   </details>
@@ -534,7 +537,7 @@
           <div class="sfield sfield--tools"><p class="sf-k">Tools</p><div class="skills__tags"><span class="tag">C#</span><span class="tag">S7-1500</span><span class="tag">Virtual robots</span><span class="tag">Simulation models</span></div></div>
         </div>
         <div class="st-impact"><span class="imp-k">Impact</span><span class="imp-v">Reliable engineering data for simulation and commissioning; visibility into validation readiness.</span></div>
-        <p class="st-learned todo">[to fill in]</p>
+        <p class="st-learned">Catching a data mismatch here costs minutes; catching it mid test-cycle costs hours — the validation tool paid for itself in the first week.</p>
       </div>
     </div>
     <div class="station reveal">
@@ -589,7 +592,7 @@
     </div>
     <div class="education reveal">
       <div class="edu-card"><p class="edu-card__tag">DEGREE 01 · GRADE 1.9</p><h3>M.Sc. Systems Engineering for Manufacturing</h3><p class="desc">Otto von Guericke University Magdeburg · 10/2022 – 12/2024. Thesis: component-based automation framework for PLC testing in virtual commissioning (→ Project 01).</p></div>
-      <div class="edu-card"><p class="edu-card__tag">DEGREE 02 · GRADE 2.0</p><h3>B.Eng. Mechanical Engineering</h3><p class="desc">08/2016 – 08/2020. Electric vehicle for agricultural applications; 4-axis robot for high-risk manufacturing environments.</p></div>
+      <div class="edu-card"><p class="edu-card__tag">DEGREE 02 · GRADE 2.0</p><h3>B.Eng. Mechanical Engineering</h3><p class="desc">Visvesvaraya Technological University · 08/2016 – 08/2020. Electric vehicle for agricultural applications; 4-axis robot for high-risk manufacturing environments.</p></div>
     </div>
   </div>
 </section>
@@ -604,6 +607,7 @@
       <p class="mod"><span class="led led--cyan"></span>PROJECT 01 · PATENT-PENDING · BMW</p>
       <h3>Component-Based PLC Test Automation</h3>
       <div class="tabs"><button class="tab-btn on" data-tab="simple">Simple</button><button class="tab-btn" data-tab="arch">Architecture</button><button class="tab-btn" data-tab="impact">Impact</button></div>
+      <div class="tab-stack">
       <div class="tab-pane on" data-pane="simple">
         <p>A plant with 10 PLCs controls 10 regions — but the same building blocks everywhere: <span class="hl">conveyors, drives, cylinders, sensors, doors, robots</span>, all from one component library. The virtual models are built from the same blocks.</p>
         <p>So test cases are written once, at the <span class="hl">component level, in abstract form</span> — then populated with real control data from whichever PLC is under test, and executed against PLC and virtual model in both directions. Watch it run on the right: the suite works through the station component by component, catches a failure, retests, and passes.</p>
@@ -613,11 +617,10 @@
         <p><span class="arch-k">Layer 2 — Information models:</span> each component type carries a model of its signals, positions and behavior — the suite knows every object the PLC can use.</p>
         <p><span class="arch-k">Layer 3 — Population engine:</span> binds templates to real control data (symbols, I/O, instance names) of the PLC under test at runtime.</p>
         <p><span class="arch-k">Layer 4 — Execution:</span> drives the S7 PLC and the virtual model (fe.screen-sim) simultaneously; asserts in both directions — actuate virtual/observe PLC, actuate PLC/observe virtual.</p>
-        <span class="review-flag">DRAFT — review wording before publishing</span>
       </div>
       <div class="tab-pane" data-pane="impact">
         <p>≈<span class="hl">22% lower testing cost per PLC</span> and ≈<span class="hl">28% shorter testing cycles</span>, measured across productive use. Test knowledge moved out of experts' heads into a reusable suite — the same test case now validates every station that uses the component. Patent-pending; rolled out to international Gen6 battery sites.</p>
-        <span class="review-flag">DRAFT — confirm figures &amp; phrasing for public use</span>
+      </div>
       </div>
       <div class="metric-row">
         <div class="metric" data-count="22"><b>0%</b><span>testing cost / PLC</span></div>
@@ -744,6 +747,7 @@
       <p class="mod"><span class="led led--amber"></span>PROJECT 02 · AI + MCP · BMW</p>
       <h3>AI-Driven Collision Detection</h3>
       <div class="tabs"><button class="tab-btn on" data-tab="simple">Simple</button><button class="tab-btn" data-tab="arch">Architecture</button><button class="tab-btn" data-tab="impact">Impact</button></div>
+      <div class="tab-stack">
       <div class="tab-pane on" data-pane="simple">
         <p>The test suite knows every position, robot, gantry and drive in the cell. Engineers used to hand-build collision scenarios sequence by sequence.</p>
         <p>Now they just ask: <span class="hl">"Is there a collision between gantry G02 and robot IR1 in part-picking position?"</span> The AI resolves the components, writes the sequence through the suite's <span class="hl">MCP server</span>, executes it in the virtual cell — and returns the verdict <span class="hl">with a video</span>. Try both buttons: same question, with and without the interlock.</p>
@@ -752,12 +756,11 @@
         <p><span class="arch-k">MCP server:</span> embedded in the test suite, exposing its execution tools (move, rotate, check_overlap…) to the LLM.</p>
         <p><span class="arch-k">Skill files:</span> describe every component type and tool, so the model knows what exists and how to drive it.</p>
         <p><span class="arch-k">Entity resolution:</span> free-text "gantry G02", "robot IR1", "pick position" mapped to concrete suite objects.</p>
-        <p><span class="arch-k">Execution &amp; evidence:</span> sequence runs in the VC environment with automated collision checks; a rendered video accompanies every verdict so the engineer verifies at a glance.</p>
-        <span class="review-flag">DRAFT — review wording before publishing</span>
+        <p><span class="arch-k">Execution &amp; evidence:</span> sequence runs in the VC environment with automated collision checks; a recording captured straight from the virtual model window accompanies every verdict, so the engineer verifies at a glance.</p>
       </div>
       <div class="tab-pane" data-pane="impact">
         <p>Scenario definition went from hand-built sequences to a typed sentence; while one scenario executes, the engineer is already formulating the next. Validation throughput rises without adding headcount, and video evidence makes results reviewable by anyone.</p>
-        <span class="review-flag">DRAFT — add concrete numbers if shareable</span>
+      </div>
       </div>
       <div class="proj__tags"><span class="tag">MCP Server</span><span class="tag">LLM Agents</span><span class="tag">Skill Files</span><span class="tag">Collision Checks</span></div>
     </div>
@@ -769,6 +772,7 @@
       <p class="mod"><span class="led led--amber"></span>PROJECT 03 · AI / RAG · BMW</p>
       <h3>PLC Knowledge Assistant</h3>
       <div class="tabs"><button class="tab-btn on" data-tab="simple">Simple</button><button class="tab-btn" data-tab="arch">Architecture</button><button class="tab-btn" data-tab="impact">Impact</button></div>
+      <div class="tab-stack">
       <div class="tab-pane on" data-pane="simple">
         <p>A locally hosted LLM with the whole engineering context embedded: <span class="hl">component library, planning data, control data and test plans in a vector database</span>, plus skill files that teach the model how to use them.</p>
         <p>Ask it <span class="hl">"How has this cylinder changed over the last six months?"</span> and watch (right) how the question routes through the skill files into EPLAN data, control code and the test plan before the grounded answer comes back.</p>
@@ -778,11 +782,10 @@
         <p><span class="arch-k">Vector DB:</span> library elements, planning data and control data embedded for semantic retrieval.</p>
         <p><span class="arch-k">Skill routing:</span> SKILL.MD files describe each data source and when to consult it; the model routes queries accordingly.</p>
         <p><span class="arch-k">Grounded synthesis:</span> answers cite their sources — EPLAN revision, control data version, test plan station.</p>
-        <span class="review-flag">DRAFT — review wording before publishing</span>
       </div>
       <div class="tab-pane" data-pane="impact">
         <p>Change tracing that used to mean manual archaeology across EPLAN exports and code diffs now takes one question. Test-plan triage ("which function group at station 20 needs attention?") comes back with failure counts and a recommendation. Also lowers the onboarding barrier for new engineers.</p>
-        <span class="review-flag">DRAFT — add concrete numbers if shareable</span>
+      </div>
       </div>
       <div class="proj__tags"><span class="tag">Local LLM</span><span class="tag">Vector DB</span><span class="tag">RAG</span><span class="tag">EPLAN Data</span><span class="tag">Skill Files</span></div>
     </div>
@@ -835,7 +838,7 @@
     <div class="proj__viz">
       <svg id="viz6" viewBox="0 0 640 360" xmlns="http://www.w3.org/2000/svg">
         <text x="130" y="30" fill="#f2a63a" font-family="JetBrains Mono, monospace" font-size="10" text-anchor="middle" letter-spacing="1">MASTER STATION</text>
-        <text x="390" y="30" fill="#5ee6d0" font-family="JetBrains Mono, monospace" font-size="10" text-anchor="middle" letter-spacing="1">SISTER STATION</text>
+        <text x="390" y="30" fill="#5ee6d0" font-family="JetBrains Mono, monospace" font-size="10" text-anchor="middle" letter-spacing="1">COPY STATION</text>
         <g id="v6-master"></g>
         <g id="v6-sister"></g>
         <line id="v6-scan" x1="30" y1="44" x2="490" y2="44" stroke="#5ee6d0" stroke-width="1.2" opacity="0"/>
@@ -863,10 +866,11 @@
     </div>
     <div class="proj__info">
       <p class="mod"><span class="led led--steel"></span>PROJECT 04 · HYBRID AI · BMW</p>
-      <h3>PLC Project Comparison, Master vs Sister</h3>
+      <h3>PLC Project Comparison, Master vs Copy Station</h3>
       <div class="tabs"><button class="tab-btn on" data-tab="simple">Simple</button><button class="tab-btn" data-tab="arch">Architecture</button><button class="tab-btn" data-tab="impact">Impact</button></div>
+      <div class="tab-stack">
       <div class="tab-pane on" data-pane="simple">
-        <p>A Master Station and a Sister Station are near-copies with different PLC programs — comparing them by hand is a nightmare.</p>
+        <p>A Master Station and its Copy Station are near-identical with different PLC programs — comparing them by hand is a nightmare.</p>
         <p>This pipeline diffs them <span class="hl">deterministically, function-block by function-block, network by network</span> — and only the actual differences are handed to an LLM, which <span class="hl">categorizes each change and judges its relevance</span>. Out comes a prioritized report.</p>
       </div>
       <div class="tab-pane" data-pane="arch">
@@ -874,11 +878,10 @@
         <p><span class="arch-k">Chunking:</span> XMLs broken into comparable units (FBs, networks).</p>
         <p><span class="arch-k">Deterministic diff:</span> exact structural comparison — no AI in the loop where precision matters.</p>
         <p><span class="arch-k">LLM classification:</span> structured diffs fed to the model, which assigns change categories and relevance, producing the high/medium/low report.</p>
-        <span class="review-flag">DRAFT — review wording before publishing</span>
       </div>
       <div class="tab-pane" data-pane="impact">
-        <p>Master/sister alignment reviews that took days of side-by-side reading collapse into a generated report; engineers start from the handful of high-priority changes instead of thousands of XML lines. Deterministic where it must be, AI where it helps.</p>
-        <span class="review-flag">DRAFT — add concrete numbers if shareable</span>
+        <p>Master/Copy Station alignment reviews that took days of side-by-side reading collapse into a generated report; engineers start from the handful of high-priority changes instead of thousands of XML lines. Deterministic where it must be, AI where it helps.</p>
+      </div>
       </div>
       <div class="proj__tags"><span class="tag">XML Diffing</span><span class="tag">Deterministic + LLM</span><span class="tag">Change Categories</span><span class="tag">Reporting</span></div>
     </div>
@@ -933,6 +936,7 @@
       <p class="mod"><span class="led led--cyan"></span>PROJECT 05 · INTERNSHIP · BMW</p>
       <h3>PLC Rule &amp; Standards Validation Tool</h3>
       <div class="tabs"><button class="tab-btn on" data-tab="simple">Simple</button><button class="tab-btn" data-tab="arch">Architecture</button><button class="tab-btn" data-tab="impact">Impact</button></div>
+      <div class="tab-stack">
       <div class="tab-pane on" data-pane="simple">
         <p>Every PLC program has to follow house standards — naming conventions, safety acknowledgements, structural rules. Checking them by hand is slow and inconsistent.</p>
         <p>We captured the standards as a <span class="hl">machine-readable ruleset in JSON</span>; the tool walks the control code, breaks it into pieces, and reports <span class="hl">which rules were violated and where</span>.</p>
@@ -941,11 +945,10 @@
         <p><span class="arch-k">Ruleset:</span> house standards formalized as JSON rule definitions.</p>
         <p><span class="arch-k">Parser:</span> control code decomposed into checkable units.</p>
         <p><span class="arch-k">Rule engine:</span> each unit validated against every applicable rule; violations collected with locations into a report.</p>
-        <span class="review-flag">DRAFT — review wording before publishing</span>
       </div>
       <div class="tab-pane" data-pane="impact">
         <p>Standards compliance became a batch job instead of a review meeting — consistent, repeatable, and fast enough to run on every change. Reliable code and data quality downstream in simulation and commissioning.</p>
-        <span class="review-flag">DRAFT — add concrete numbers if shareable</span>
+      </div>
       </div>
       <div class="proj__tags"><span class="tag">JSON Rulesets</span><span class="tag">Static Analysis</span><span class="tag">Code Quality</span><span class="tag">TIA Portal</span></div>
     </div>
@@ -957,6 +960,7 @@
       <p class="mod"><span class="led led--steel"></span>PROJECT 06 · RESEARCH · OVGU MAGDEBURG</p>
       <h3>Two-Way Digital Twin of a Miniature Production Line</h3>
       <div class="tabs"><button class="tab-btn on" data-tab="simple">Simple</button><button class="tab-btn" data-tab="arch">Architecture</button><button class="tab-btn" data-tab="impact">Impact</button></div>
+      <div class="tab-stack">
       <div class="tab-pane on" data-pane="simple">
         <p>A physical miniature manufacturing line in the university lab, mirrored one-to-one in <span class="hl">Tecnomatix Plant Simulation</span> over <span class="hl">OPC UA</span> — it's the live system running at the top of this page, HMI and all.</p>
         <p>Genuinely bidirectional: stop the physical model and the simulation halts; start from the simulation and the physical line spins up.</p>
@@ -965,10 +969,10 @@
         <p><span class="arch-k">Connectivity:</span> OPC UA server/client linking the physical line's PLC with Plant Simulation.</p>
         <p><span class="arch-k">Two-way binding:</span> state flows physical→virtual; commands flow both directions.</p>
         <p><span class="arch-k">Dashboard:</span> web KPI dashboard for energy metrics and shop-floor information with dual-channel interaction.</p>
-        <span class="review-flag">DRAFT — review wording before publishing</span>
       </div>
       <div class="tab-pane" data-pane="impact">
         <p>A working research foundation for shop-floor development — live energy monitoring, process insight, and a hands-on digital twin for students and researchers.</p>
+      </div>
       </div>
       <p style="font-family:var(--mono); font-size:.78rem; color:var(--accent);">↑ Live demo in the About section.</p>
       <div class="proj__tags"><span class="tag">Tecnomatix</span><span class="tag">OPC UA</span><span class="tag">KPI Dashboard</span><span class="tag">Digital Twin</span></div>
@@ -1003,7 +1007,7 @@
   <a class="contact__email reveal" href="mailto:ambaprasad.hegde@gmail.com">ambaprasad.hegde@gmail.com</a>
   <div class="contact__links reveal">
     <a href="https://www.linkedin.com/in/ambaprasad-hegde/" target="_blank" rel="noopener">LinkedIn</a>
-    <a href="#">GitHub</a>
+    <a href="https://github.com/prasadGhegde" target="_blank" rel="noopener">GitHub</a>
     <a href="#" id="gen-tc" onclick="return genTestCase()">Generate Test Case</a>
   </div>
   <details class="eggs reveal">
